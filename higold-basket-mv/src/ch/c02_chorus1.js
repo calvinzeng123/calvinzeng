@@ -125,14 +125,17 @@
   // =====================================================================================================
   // SHOT 1 · HOOK — 一拉就到位. Giant per-character slam; the five-member line pulls on the syllables.
   // =====================================================================================================
+  // bigger, whole-body versions of the signature pull (reach lunges right, yank sits back left) so it reads at thumbnail size
+  const REACH = pose({ lean: .14, head: .1, sR: 1.55, eR: .02, sL: .9, eL: -1.9, hL: .1, kL: .05, hR: .46, kR: .28, dy: -.12 });
+  const YANK = pose({ lean: -.24, head: -.14, sR: .62, eR: -2.2, sL: .95, eL: -1.95, hL: .42, kL: .55, hR: .28, kR: .02, dy: -.3, squash: .06 });
   const HOOK_KEYS = [
     [-9, KP.ready],
-    [T6[0], KP.reach, .1],                                         // 一  reach
-    [T6[1], KP.yank, .1],                                          // 拉  YANK (beat 34)
-    [T6[2], pose({ ...KP.yank, dy: -.1, kL: .5, kR: .5 }), .1],    // 就  sink
-    [bt(34.5), pose({ ...KP.yank, dy: .02 }), .2],                //     groove back up
-    [T6[3], mirrorPose(KP.reach), .1],                             // 到  reach the other way (beat 35)
-    [T6[4], mirrorPose(KP.yank), .1],                              // 位  yank — in place
+    [T6[0], REACH, .1],                                            // 一  reach
+    [T6[1], YANK, .09],                                            // 拉  YANK (beat 34)
+    [T6[2], pose({ ...YANK, dy: -.42, kL: .7, kR: .2 }), .1],      // 就  sink
+    [bt(34.5), pose({ ...YANK, dy: -.22 }), .2],                   //     groove back up
+    [T6[3], mirrorPose(REACH), .1],                                // 到  reach the other way (beat 35)
+    [T6[4], mirrorPose(YANK), .09],                                // 位  yank — in place
   ];
   function sHook(t, lt) {
     paperBG();
@@ -140,8 +143,8 @@
     const [shx, shy] = shake(t, 9 * dec(t, T6[1], 11) + 6 * dec(t, T6[3], 11), 7);
     cam(CX + shx, CY + shy, z);
     bigBasketBG(t, { a: .04, sy: 500, px: 1250, spin: .16, yaw: -.3 });
-    stageFloor(1052);
-    crewLine(t, poseAt(t, HOOK_KEYS), { y: 1052, s: 29, spread: 322, lanFace: t > T6[1] ? 'happy' : 'smile' });
+    stageFloor(1026);
+    crewLine(t, poseAt(t, HOOK_KEYS), { y: 1026, s: 28, spread: 322, lanFace: t > T6[1] ? 'happy' : 'smile' });
     // the text row + the slide rail that "pulls out" under it, one character at a time; 拉 itself is PULLED in from the right
     const size = 322, base = 540;
     const boxes = slam(6, t, { size, y: base, hi: '拉', pop: 1.6, dur: .12, pullIn: '拉' });
@@ -195,11 +198,11 @@
     prims.push(...doorModel(-bw / 2 - 20, -10, bw / 2 + 20, 150, bd + 20 + ext, { th: 18 }));
     // the line: each item hops into its queue spot on its syllable (锅 碗 瓢 盆), they bounce on the 8ths,
     // leap together on 排 and land in a perfect row on 队 (beat 38)
-    const zq = 640, qx = [-600, -775, -950, -1115], slotX = [-315, -105, 105, 315], leap0 = T7[4], land = bt(38);
+    const shadows = [], zq = 640, qx = [-600, -775, -950, -1115], slotX = [-315, -105, 105, 315], leap0 = T7[4], land = bt(38);
     MARCH.forEach((kind, i) => {
-      const t0 = T7[i] - .14; if (t < t0) return;
+      const t0 = T7[i] - .16; if (t < t0) return;
       let x, y, z = zq, tilt;
-      const k = clamp((t - t0) / .2);
+      const k = clamp((t - t0) / .16);          // each item lands in its spot exactly on its syllable
       x = lerp(-1700, qx[i], E.out(k)); y = -20 + 160 * Math.sin(k * Math.PI); tilt = -.35 * (1 - E.out(k));
       if (k >= 1) { const ph = frac(bp(t) * 2); y = -20 + 34 * Math.sin(ph * Math.PI); tilt = .1 * Math.sin(bp(t) * Math.PI); }
       if (t >= leap0) {
@@ -210,6 +213,11 @@
       }
       const items = scale3(itemPrims(kind, [0, 0, 0], tilt), .86).map(p => ({ ...p, bias: -40 }));
       prims.push(...translate3(items, [x, y, z]));
+      if (t < leap0 + .12) shadows.push([x, z, y + 20, kind === 'ladle' ? 50 : 100]);
+    });
+    shadows.forEach(([x, z, hgt, r]) => {
+      const c = pin(C, [x, -20, z]), rx = pin(C, [x + r, -20, z])[0] - c[0], k = clamp(1 - hgt / 400);
+      X.save(); X.globalAlpha *= .13 * k; X.fillStyle = PAL.ink; X.beginPath(); X.ellipse(c[0], c[1], rx * (.7 + .3 * k), rx * .32 * (.7 + .3 * k), 0, 0, TAU); X.fill(); X.restore();
     });
     render3(prims, C, { style: 'steel', shine: lerp(-600, 600, frac(bp(t) / 2)) });
     // alignment guide the moment they land in a row
@@ -304,7 +312,8 @@
     const floor = 992, s = 60, x0 = 1400, x1 = 1960, top = 662;
     const upT = T9[0], pullT = T9[3], xT = T9[1];
     const ext = 340 * E.soft((t - pullT) / .75);
-    cam(CX - 10 + lt * 10, CY, 1.02 - lt * .01);
+    const push = E.io((t - pullT) / .9);
+    cam(CX - 10 + lt * 10 + push * 70, CY + push * 40, 1.02 - lt * .01 + push * .06);
     handLine(-40, floor, W + 40, floor, { w: 3, seed: 90 });
     sideCabinet(x0, x1, top, floor, ext);
     // LAN is bent into the closed cabinet; on 不 she pops upright and hops back, leaving the old habit behind as a grey
@@ -358,7 +367,8 @@
     render3(dishDrawer(ext, { front: false }), C, { style: 'steel', shine });
     const y0 = 60, h = 150, w = 560, d = 440;
     const pts = [[-w / 2, y0 + h, ext + d], [w / 2, y0 + h, ext + d], [w / 2, y0 + h, ext], [-w / 2 + 140, y0 + h, ext + d]].map(p => pin(C, p));
-    glints(t, pts, { r: 52 });
+    glints(t, pts, { r: 78 });
+    pts.forEach((p, j) => sparkle(p[0], p[1], 22, { k: clamp(pulse(t, 5) * (j % 2 ? 1 : .6)), col: PAL.shine, rot: .78 }));
     steelColumn(t);
   }
   function sMacro(t, lt) {
@@ -378,7 +388,7 @@
   // SHOT 6a · 每一次拉开 — outline type, the line pulls on 拉/开.   SHOT 6b · 都心动 — LAN's heart + wire hearts.
   // =====================================================================================================
   const DIP = pose({ ...KP.ready, dy: -.3, kL: .5, kR: .5, hL: .24, hR: .24 });
-  const PULL_KEYS = [[-9, KP.ready], [T11[0], DIP, .1], [T11[1], KP.ready, .1], [T11[2], DIP, .1], [T11[3], KP.reach, .1], [T11[4], KP.yank, .1], [bt(50.5), pose({ ...KP.yank, dy: .05 }), .2]];
+  const PULL_KEYS = [[-9, KP.ready], [T11[0], DIP, .1], [T11[1], KP.ready, .1], [T11[2], DIP, .1], [T11[3], REACH, .1], [T11[4], YANK, .09], [bt(50.5), pose({ ...YANK, dy: -.15 }), .2]];
   function sPull(t, lt) {
     paperBG();
     const z = 1.04 - .04 * E.out(lt / 1.2) + punch(t, [T11[4]], .03, 8);
@@ -387,9 +397,9 @@
     dotGrid(24, 24, W, H, 48, 1.4, PAL.ink, .07);
     const sk = dec(t, T11[4], 5);
     if (sk > .02) speedLines(CX, 560, 420, 1400, 70, { a: .22 * sk, w: 10, seed: 5 });
-    stageFloor(1010);
-    crewLine(t, poseAt(t, PULL_KEYS), { y: 1010, s: 27, spread: 300, stagger: 30, depth: .07, mirror: true });
-    slam(11, t, { rows: [0], size: 250, y: 470, hi: '拉', stroke: PAL.ink, sw: 7, pop: 1.5, ticks: true });
+    stageFloor(1030);
+    crewLine(t, poseAt(t, PULL_KEYS), { y: 1030, s: 31, spread: 310, stagger: 44, depth: .08, mirror: true });
+    slam(11, t, { rows: [0], size: 250, y: 440, hi: '拉', stroke: PAL.ink, sw: 7, pop: 1.5, ticks: true });
     camEnd();
   }
   function heartPath(cx, cy, r, n = 64) {
@@ -447,11 +457,16 @@
       x += cw;
     });
     X.restore();
-    steelBar(CX - tw / 2 - 150, slotY + 16, CX - tw / 2 - 150 + (tw + 300) * E.soft((t - b52 + .1) / .5), 14);
+    const rx0 = CX - tw / 2 - 150, rx1 = rx0 + (tw + 300) * E.soft((t - b52 + .1) / .5);
+    steelBar(rx0, slotY + 16, rx1, 14);
+    if (t > b52 + .4) {   // a glint runs along the rail on every beat
+      const gx = lerp(rx0 + 20, rx1 - 20, E.io(clamp(sinceBeat(t) / .45)));
+      sparkle(gx, slotY + 12, 30, { k: Math.sin(clamp(sinceBeat(t) / .45) * Math.PI), col: PAL.ink, rot: 0 });
+    }
     // 悍高 stamp (beat 53)
     const sk = clamp((t - b53) / .25);
     if (sk > 0) {
-      const sx = CX + tw / 2 - 40, sy = 330, s = E.back(sk, 2.4);
+      const sx = CX + tw / 2 - 40, sy = 330, s = E.back(sk, 2.4) * (1 + .035 * pulse(t, 7) * clamp((t - b53 - .3) * 5));
       X.save(); X.translate(sx + 110, sy); X.rotate(.06); X.scale(s, s);
       rect(-110 + 8, -110 + 8, 220, 220, PAL.ink); rect(-110, -110, 220, 220, PAL.paper); X.strokeStyle = PAL.ink; X.lineWidth = 5; X.strokeRect(-110, -110, 220, 220);
       text('悍', 0, -8, { size: 100, font: F.heavy, weight: 900, align: 'center' }); text('高', 0, 92, { size: 100, font: F.heavy, weight: 900, align: 'center' });
@@ -477,7 +492,8 @@
     // LAN at the left edge: grabs the edge on beat 55, yanks on beat 56
     const ek = E.out5((t - b55 + .12) / .22);
     if (ek > 0) { rect(0, 0, 12 * ek, H, PAL.ink); rect(4 * ek, 0, 3 * ek, H, PAL.steel2); rect(12 * ek, 0, 26, H, PAL.ink, .12 * ek); }
-    const P = poseAt(t, [[-9, KP.hips], [b55, mirrorPose(KP.reach), .12], [b56, mirrorPose(KP.yank), .1]]);
+    const groove = pose({ ...KP.hips, dy: -.18 * Math.abs(Math.sin(bp(t) * Math.PI)), kL: .25 * Math.abs(Math.sin(bp(t) * Math.PI)), kR: .25 * Math.abs(Math.sin(bp(t) * Math.PI)), head: .08 * Math.sin(bp(t) * Math.PI) });
+    const P = t < b55 ? groove : poseAt(t, [[-9, groove], [b55, mirrorPose(REACH), .12], [b56, mirrorPose(YANK), .1]]);
     const lx = 140 + 40 * E.out5((t - b56) / .2);
     figure(lx, 978, 25, P, { who: 'lan', face: t > b56 ? 'happy' : 'smile', blush: 1, seed: 11 });
   }

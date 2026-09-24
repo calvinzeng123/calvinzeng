@@ -315,18 +315,18 @@ function shotGalaxy(t, lt) {
   const C = frameCam([0, 150, 260], .62 - pb * .06, .3, lerp(1380, 1560, pb), lerp(700, 790, pb), 760, lerp(700, 430, pb), { fov: 28 });
   const bIn = pin(C, [0, 230, 280 + ext]), gk = clamp((bk - .04) / 1.15), ge = E.soft(gk);
   const G = { x: lerp(bIn[0], 1110, ge), y: lerp(bIn[1], 380, ge), R: lerp(10, 720, ge), spin: -(t - T_GAL) * .3 - 1.6 * (1 - ge), ci: lerp(.95, .52, ge), pa: -.2, grow: gk, a: 1 };
-  // light leaking round the closed drawer (the black-hole cabinet of verse 1, reversed)
-  if (kp < .4) {
-    const cn = [[-316, 10], [316, 10], [316, 330], [-316, 330]].map(([x, y]) => pin(C, [x, y, 461 + ext]));
-    X.beginPath(); cn.forEach((q, m) => m ? X.lineTo(q[0], q[1]) : X.moveTo(q[0], q[1])); X.closePath();
-    glowStroke(3, (.55 + .45 * pulse(t, 5)) * (1 - clamp(kp / .4)), PAL.shine, 5, .3);
-  }
   galaxy(G, t);
   // the stream that joins the drawer to the galaxy while it unfurls
   if (gk > 0 && gk < 1) { X.beginPath(); X.moveTo(bIn[0], bIn[1]); X.quadraticCurveTo(bIn[0] - 60, lerp(bIn[1], G.y, .6), G.x, G.y); glowStroke(4, (1 - gk) * .9, PAL.shine, 6, .25); }
   handLine(640, 968, 1880, 968, { w: 2.2, col: PAL.steel1, seed: 707 });
   const prims = cabinetPrims(ext, { handle: kp > 0 && kp < 1.4 ? PAL.orange : PAL.steel2 });
   render3(prims, C, { style: 'glow', dark: true });
+  // light leaking round the closed drawer (the black-hole cabinet of verse 1, reversed)
+  if (kp < .4) {
+    const cn = [[-316, 10], [316, 10], [316, 330], [-316, 330]].map(([x, y]) => pin(C, [x, y, 461 + ext]));
+    X.beginPath(); cn.forEach((q, m) => m ? X.lineTo(q[0], q[1]) : X.moveTo(q[0], q[1])); X.closePath();
+    glowStroke(3, (.55 + .45 * pulse(t, 5)) * (1 - clamp(kp / .4)), PAL.shine, 5, .3);
+  }
   if (bk > 0 && bk < .45) speedLines(bIn[0], bIn[1], 70, 460, 24, { col: PAL.paper, a: .45 * (1 - bk / .45), w: 3, seed: 17 });
   // LAN: reach → yank; her hand stays on the handle and she walks back with the drawer (tiny figure, huge galaxy)
   const hd = pin(C, [-322, 215, 452 + ext]), Pz = lerpPose(KP.reach, KP.yank, E.out5(clamp(kp / .3)));
@@ -436,70 +436,73 @@ function shotHome(t, lt) {
 // =====================================================================================================================
 // F · drawers to the horizon (越拉越多): a stack runs off to the vanishing point and pulls out in an exponential wave
 // =====================================================================================================================
-const HC = 600, HR = 3, HRH = 300, HDEP = 560;
+const HC = 600, HR = 4, HRH = 320, HDEP = 560, HEXT = 540;
 function shotHorizon(t, lt) {
-  const mv = E.out(clamp(lt / 2.1));
-  const C = camera3({ eye: [2300 + mv * 500, 1500 + mv * 350, 1500 + mv * 900], at: [-900, 780, -5200], fov: 42, cx: CX, cy: CY });
-  const hz = C.project([0, 1500, -1e7]), hy = hz[1];
+  const mv = clamp((t - T_HOR) / 2.1), ya = .5 - mv * .03, tl = -.02;     // a steady forward track along the stack
+  const eye = [-2900, 1350 + mv * 120, 3200 - mv * 2400];
+  const C = camera3({ eye, at: vadd(eye, [Math.sin(ya) * 1e4, Math.tan(tl) * 1e4, -Math.cos(ya) * 1e4]), fov: 44, cx: 1330, cy: 500 });
+  const vp = C.project(vadd(eye, [0, 0, -1e9])), hy = vp[1];
   cosmos(t, { dx: -t * 20, clipY: hy - 4 });
-  DARK = true;
   // floor grid below the horizon
   X.save(); X.beginPath(); X.rect(0, hy, W, H - hy); X.clip();
   X.beginPath();
-  for (let m = -3; m <= 14; m++) { const a = C.project([m * 600 + 300, 0, 3000]), b = C.project([m * 600 + 300, 0, -4e5]); if (a[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
-  glowStroke(1, .22);
+  for (let m = -14; m <= 2; m++) { const a = C.project([m * 600, 0, 4000]), b = C.project([m * 600, 0, -6e5]); if (a[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
+  glowStroke(1, .2);
   X.beginPath();
-  for (let j = -4; j < 60; j++) { const z = -j * j * 90 - j * 600; const a = C.project([-2000, 0, z]), b = C.project([9000, 0, z]); if (a[2] > 5 && b[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
-  glowStroke(1, .16);
+  for (let j = -6; j < 70; j++) { const z = -j * j * 60 - j * 600; const a = C.project([-12000, 0, z]), b = C.project([HDEP, 0, z]); if (a[2] > 5 && b[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
+  glowStroke(1, .14);
   X.restore();
-  X.beginPath(); X.moveTo(0, hy); X.lineTo(W, hy); glowStroke(1.6, .8);
-  // wave front: exponential in time (越拉越多)
-  const t0 = LY[38].t[0], al = 2.35, J = t < t0 ? -1 : 4 * (Math.exp(al * (t - t0)) - 1);
-  const NC = 260;
+  X.beginPath(); X.moveTo(0, hy); X.lineTo(W, hy); glowStroke(1.6, .75);
+  // the stack: HR drawers high, running to the vanishing point. Wave front grows exponentially in time (越拉越多).
+  const t0 = LY[38].t[0], al = 2.35, J = t < t0 ? -1 : 4 * (Math.exp(al * (t - t0)) - 1), NC = 280;
+  const P3 = (x, y, z) => C.project([x, y, z]), poly4 = q => { X.beginPath(); q.forEach((p, m) => m ? X.lineTo(p[0], p[1]) : X.moveTo(p[0], p[1])); X.closePath(); };
+  const rows = [...Array(HR).keys()].sort((a, b) => Math.abs(b * HRH + HRH / 2 - eye[1]) - Math.abs(a * HRH + HRH / 2 - eye[1]));
   for (let j = NC - 1; j >= 0; j--) {
-    const z1 = -j * HC, z0 = z1 - HC, near = C.project([0, 450, z1]), ppu = near[3];
-    if (near[2] < 50) continue;
-    const small = ppu * HC < 7;
-    for (let r = 0; r < HR; r++) {
-      const y0 = r * HRH, y1 = y0 + HRH, tp = t0 + Math.log(1 + j / 4) / al + r * .04, ext = t < tp ? 0 : 420 * E.soft((t - tp) / .5);
-      const P3 = (x, y, z) => C.project([x, y, z]);
-      // carcass front cell
-      const c = [P3(0, y0, z0), P3(0, y1, z0), P3(0, y1, z1), P3(0, y0, z1)];
-      X.beginPath(); c.forEach((q, m) => m ? X.lineTo(q[0], q[1]) : X.moveTo(q[0], q[1])); X.closePath();
-      X.fillStyle = PAL.night; X.fill(); X.strokeStyle = rgba(PAL.steel2, small ? .35 : .55); X.lineWidth = small ? .8 : 1.3; X.stroke();
-      if (ext < 2) continue;
-      const zi0 = z0 + 30, zi1 = z1 - 30, yb = y0 + 40, yt = y1 - 60;
-      if (!small) {   // basket body: top + bottom rim on the near side, far top rim, uprights
-        X.beginPath();
-        const A = P3(0, yt, zi1), Bq = P3(ext, yt, zi1), Cq = P3(0, yb, zi1), Dq = P3(ext, yb, zi1), Ef = P3(0, yt, zi0), Ff = P3(ext, yt, zi0);
-        X.moveTo(A[0], A[1]); X.lineTo(Bq[0], Bq[1]); X.moveTo(Cq[0], Cq[1]); X.lineTo(Dq[0], Dq[1]); X.moveTo(Ef[0], Ef[1]); X.lineTo(Ff[0], Ff[1]);
-        const nu = Math.max(2, Math.min(12, Math.floor(ext / 40)));
-        for (let m = 1; m < nu; m++) { const x = ext * m / nu, a = P3(x, yt, zi1), b = P3(x, yb, zi1); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); }
-        glowStroke(clamp(ppu * 5, .8, 2.4), .95);
+    const z1 = -j * HC, z0 = z1 - HC, near = P3(0, 600, z1); if (near[2] < 60) continue;
+    const ppu = near[3], small = ppu * HC < 8;
+    if (small) {   // far columns: just the cell edges
+      X.beginPath(); for (let r = 0; r <= HR; r++) { const a = P3(0, r * HRH, z0), b = P3(0, r * HRH, z1); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); }
+      const a = P3(0, 0, z1), b = P3(0, HR * HRH, z1); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]);
+      X.strokeStyle = rgba(PAL.steel2, .5); X.lineWidth = .8; X.stroke();
+      const tp = t0 + Math.log(1 + j / 4) / al; if (t > tp) { X.beginPath(); const c = P3(-HEXT * E.soft((t - tp) / .5), HR * HRH * .5, (z0 + z1) / 2); X.arc(c[0], c[1], 1.4, 0, TAU); X.fillStyle = PAL.shine; X.fill(); }
+      continue;
+    }
+    // carcass top (the counter edge) for this column
+    poly4([P3(0, HR * HRH, z0), P3(HDEP, HR * HRH, z0), P3(HDEP, HR * HRH, z1), P3(0, HR * HRH, z1)]); X.fillStyle = PAL.night2; X.fill(); X.strokeStyle = rgba(PAL.steel2, .5); X.lineWidth = 1; X.stroke();
+    for (const r of rows) {
+      const y0 = r * HRH, y1 = y0 + HRH, tp = t0 + Math.log(1 + j / 4) / al + r * .035, ext = t < tp ? 0 : HEXT * E.soft((t - tp) / .5);
+      poly4([P3(0, y0, z0), P3(0, y1, z0), P3(0, y1, z1), P3(0, y0, z1)]);
+      X.fillStyle = PAL.night; X.fill(); X.strokeStyle = rgba(PAL.steel2, .5); X.lineWidth = 1.2; X.stroke();
+      if (ext < 2) {   // closed: the front sits flush
+        poly4([P3(-2, y0 + 8, z0 + 8), P3(-2, y1 - 8, z0 + 8), P3(-2, y1 - 8, z1 - 8), P3(-2, y0 + 8, z1 - 8)]); X.fillStyle = PAL.night2; X.fill(); X.strokeStyle = rgba(PAL.steel2, .8); X.lineWidth = 1.3; X.stroke();
+        continue;
       }
-      const f = [P3(ext, y0 + 8, z0 + 8), P3(ext, y1 - 8, z0 + 8), P3(ext, y1 - 8, z1 - 8), P3(ext, y0 + 8, z1 - 8)];
-      X.beginPath(); f.forEach((q, m) => m ? X.lineTo(q[0], q[1]) : X.moveTo(q[0], q[1])); X.closePath();
-      X.fillStyle = PAL.night2; X.fill(); X.strokeStyle = PAL.steel2; X.lineWidth = small ? .8 : clamp(ppu * 6, 1, 2.6); X.stroke();
-      if (!small) { const h0 = P3(ext + 2, y1 - 50, lerp(z0, z1, .3)), h1 = P3(ext + 2, y1 - 50, lerp(z0, z1, .7)); line(h0[0], h0[1], h1[0], h1[1], clamp(ppu * 10, 1, 4), j === 0 && r === 1 ? PAL.orange : PAL.steel2); }
+      // pulled: the basket is a lit wire cage (see-through front), so the wave reads against the dark closed cells
+      const zi0 = z0 + 34, zi1 = z1 - 34, yb = y0 + 30, yt = y1 - 64, big = ppu * HC > 45;
+      X.beginPath();
+      const seg = (a, b) => { const p = P3(...a), q = P3(...b); X.moveTo(p[0], p[1]); X.lineTo(q[0], q[1]); };
+      for (const z of [zi0, zi1]) for (const y of [yb, yt, (yb + yt) / 2]) seg([0, y, z], [-ext, y, z]);
+      for (const y of [yb, yt]) seg([-ext, y, zi0], [-ext, y, zi1]);
+      if (big) { const nu = Math.max(3, Math.min(16, Math.floor(ext / 34))); for (let m = 1; m <= nu; m++) { const x = -ext * m / nu; seg([x, yt, zi1], [x, yb, zi1]); seg([x, yt, zi0], [x, yb, zi0]); seg([x, yb, zi0], [x, yb, zi1]); } }
+      glowStroke(clamp(ppu * 3.2, .7, 2), .9);
+      if (big) for (let m = 0; m < 4; m++) {   // plates standing in the rack: true projected circles
+        const xc = -ext * (.2 + m * .19), yc = yb + 118, zc = lerp(zi0, zi1, .36), rr = 112;
+        X.beginPath(); for (let q = 0; q <= 24; q++) { const a = q / 24 * TAU, pp = P3(xc, yc + Math.cos(a) * rr, zc + Math.sin(a) * rr); q ? X.lineTo(pp[0], pp[1]) : X.moveTo(pp[0], pp[1]); }
+        X.fillStyle = PAL.night2; X.fill(); X.strokeStyle = PAL.paper; X.lineWidth = clamp(ppu * 3.5, .8, 2); X.stroke();
+      }
+      poly4([P3(-ext, y0 + 8, z0 + 8), P3(-ext, y1 - 8, z0 + 8), P3(-ext, y1 - 8, z1 - 8), P3(-ext, y0 + 8, z1 - 8)]);
+      X.fillStyle = rgba(PAL.night2, .35); X.fill(); X.strokeStyle = PAL.steel2; X.lineWidth = clamp(ppu * 5, 1, 2.6); X.stroke();
+      const h0 = P3(-ext - 2, y1 - 48, lerp(z0, z1, .3)), h1 = P3(-ext - 2, y1 - 48, lerp(z0, z1, .7));
+      line(h0[0], h0[1], h1[0], h1[1], clamp(ppu * 10, 1, 5), j === 0 && r === 1 ? PAL.orange : PAL.steel2);
     }
   }
-  // counter (joke readout)
-  const cnt = J < 0 ? 0 : Math.min(999999, Math.floor((J + 1) * HR));
-  text('拉篮 ×', 104, 980, { size: 30, font: F.sans, weight: 700, col: PAL.steel1 });
-  text(J > 700 ? '∞' : String(cnt), 214, 982, { size: 40, font: F.mono, weight: 800, col: PAL.paper });
-  // lyric: main line + echoes marching off toward the vanishing point
+  // counter (a joke readout, not a product claim)
+  const cnt = J < 0 ? 0 : Math.floor((J + 1) * HR);
+  text('拉篮 ×', 104, 990, { size: 30, font: F.sans, weight: 700, col: PAL.steel1 });
+  text(J > 1000 ? '∞' : String(cnt), 214, 992, { size: 42, font: F.mono, weight: 800, col: PAL.paper });
+  // lyric: one big line in the clear sky above the vanishing point
   const L = LY[38], env = lyEnv(38, t, .3, .2);
-  if (env > 0) {
-    LYRIC_DRAWN.add(38);
-    const sz = 170, x0 = 100, y0 = 330, n = L.t.filter(q => t >= q - .03).length;
-    X.save(); X.globalAlpha *= env;
-    for (let e = Math.min(6, n * 2); e >= 1; e--) {
-      const s = Math.pow(.72, e), ox = lerp(x0, hz[0], 1 - s) * 0 + x0 + (hz[0] - x0) * (1 - s) * .5, oy = y0 + (hy - 40 - y0) * (1 - s) * .9;
-      text(L.text, ox, oy, { size: sz * s, font: F.heavy, weight: 900, col: null, stroke: rgba(PAL.steel2, .55 * s + .1), sw: 2 });
-    }
-    lySlamRow(L, t, x0, y0, sz, '拉');
-    X.restore();
-  }
+  if (env > 0) { LYRIC_DRAWN.add(38); X.save(); X.globalAlpha *= env; lySlamRow(L, t, 100, 300, 190, '拉'); X.restore(); }
 }
 function lySlamRow(L, t, x0, y, sz, hi) {
   let x = x0; const chars = [...L.text];

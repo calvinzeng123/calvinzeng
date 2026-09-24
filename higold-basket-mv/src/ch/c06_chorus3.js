@@ -143,7 +143,7 @@
     if (R) {
       const r = R[0]; let x = r.x0;
       lyRows(28)[0].forEach((c, j) => {
-        const k = chK(c.ti, t, .4), cx = x + r.ws[j] / 2;
+        const k = chK(c.ti + .16, t, .4), cx = x + r.ws[j] / 2;
         if (k > 0) text(PINYIN[j], cx, sy + 62, { size: 38, font: F.serifI, col: PAL.ink2, align: 'center', a: E.out(k) });
         x += r.ws[j] + r.tr;
       });
@@ -178,7 +178,7 @@
         const rows = lyType(29, t, { x: L0, y: by + 236, size: 134, weight: 900, lead: 168, dur: .32, hold: .4, cols: [on ? mixCol(PAL.ink, PAL.paper, .55 * off) : PAL.ink, PAL.ink] });
         if (rows && on) { const r0 = rows[0], k = E.out(clamp((t - click) / .3)); ln(r0.x0 - 10, r0.y - r0.size * .36, r0.x0 - 10 + (r0.w + 20) * k, r0.y - r0.size * .36, 5, PAL.ink); }
         // anxiety trace: jagged, pulsing on the beat → flatline after the click
-        const ty = by + 500, x0 = L0, x1 = R0, amp = 38 * (.55 + .45 * pulse(t, 4)) * (1 - off);
+        const ty = by + 538, x0 = L0, x1 = R0, amp = 38 * (.55 + .45 * pulse(t, 4)) * (1 - off);
         mono('焦虑 / ANXIETY', x0, ty - 58, { size: 14 });
         mono(on ? '0%' : '99%', x1, ty - 58, { size: 14, align: 'right', col: on ? PAL.ink2 : PAL.ink });
         ln(x0, ty, x1, ty, 1, PAL.ink, .18);
@@ -196,7 +196,7 @@
     if (t > 97.55) {
       const g = E.soft((t - 97.6) / .8), cx = lerp(1640, wx + 21, g), cy = lerp(980, wy + 20, g);
       const ck = on ? clamp((t - click) / .4) : 0, dr = on ? E.out((t - click - .15) / .6) : 0;
-      cursor(cx + dr * 26, cy + dr * 30, { click: on && ck < 1 ? ck : 0, s: 1.3 });
+      cursor(cx - dr * 34, cy - dr * 40, { click: on && ck < 1 ? ck : 0, s: 1.3 });
     }
     camEnd();
     sheet(t, 1);
@@ -232,7 +232,7 @@
     for (let j = 0; j <= 3; j++) { const y = gy + j * cs; X.moveTo(gx + cs * 2.5 - cs * 2.5 * gk, y); X.lineTo(gx + cs * 2.5 + cs * 2.5 * gk, y); }
     X.stroke(); X.restore();
     // cell-centre registration crosses
-    for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) { const x = gx + (i + .5) * cs, y = gy + (j + .5) * cs; ln(x - 5, y, x + 5, y, 1, PAL.ink, .25 * gk); ln(x, y - 5, x, y + 5, 1, PAL.ink, .25 * gk); }
+    for (let i = 0; i < 5; i++) for (const j of [0, 2]) { const x = gx + (i + .5) * cs, y = gy + (j + .5) * cs; ln(x - 5, y, x + 5, y, 1, PAL.ink, .25 * gk); ln(x, y - 5, x, y + 5, 1, PAL.ink, .25 * gk); }
     // objects: scattered → snapped (each on its own 16th, a shuffled order so it feels found, not mechanical)
     let n = 0;
     [0, 2].forEach(r => GRID_ROWS[r].forEach((name, c) => {
@@ -362,7 +362,7 @@
   // =====================================================================================================================
   // 05 · ELEVATION (102.46 – 104.51) — a section through a seasoning pull-out; a cobalt lens flies from 眼 to the salt and locks.
   // =====================================================================================================================
-  const EQ = .98, EX0 = 740, EFY = 905;                       // elevation scale, cabinet back x, floor y
+  const EQ = .9, EX0 = 770, EFY = 922;                       // elevation scale, cabinet back x, floor y
   const ex = u => EX0 + u * EQ, ey = y => EFY - y * EQ;
   const BOTTLE_B = [[PROF.bottle, '酱', 1], [PROF.tall.map(([r, y]) => [r * .92, y * .82]), '油', 0], [PROF.bottle, '醋', 1], [PROF.jar.map(([r, y]) => [r * 1.1, y * 1.2]), '糖', 0]];
   const BOTTLE_T = [[PROF.jar, '椒', 0], [PROF.jar.map(([r, y]) => [r * .9, y * 1.25]), '粉', 1], [PROF.jar, '盐', 0], [PROF.jar.map(([r, y]) => [r * .85, y * .95]), '茴', 1]];
@@ -383,7 +383,13 @@
     ln(EX0 - 60, EFY, ex(1100), EFY, 2.2);
     for (let i = 0; i < 40; i++) { const x = EX0 - 50 + i * 30; if (x > ex(1080)) break; ln(x, EFY + 3, x - 10, EFY + 13, 1, PAL.ink, .3); }
     const cut = (u0, y0, u1, y1) => { const pts = [[ex(u0), ey(y1)], [ex(u1), ey(y1)], [ex(u1), ey(y0)], [ex(u0), ey(y0)]]; fillPoly(pts, PAL.paper); hatch(pts, { gap: 6, w: 1, a: .7, angle: .8, seed: u0 + y0 }); stroke(() => poly(pts), 2); };
-    fillPoly([[ex(back), ey(820)], [ex(front), ey(820)], [ex(front), ey(100)], [ex(back), ey(100)]], PAL.paper2, .32);   // far side panel
+    // beyond: shelf-pin holes on the far side panel + the basket's closed position as a dashed ghost (its travel)
+    X.save(); X.fillStyle = PAL.ink; X.globalAlpha *= .35; X.beginPath();
+    for (const u of [60, 500]) for (let y = 200; y <= 760; y += 32) { X.moveTo(ex(u) + 2.2, ey(y)); X.arc(ex(u), ey(y), 2.2, 0, TAU); }
+    X.fill(); X.restore();
+    X.save(); X.setLineDash([7, 6]); X.strokeStyle = PAL.ink; X.lineWidth = 1.2; X.globalAlpha *= .45;
+    X.strokeRect(ex(90), ey(620), 440 * EQ, 460 * EQ); X.beginPath(); X.moveTo(ex(90), ey(470)); X.lineTo(ex(530), ey(470)); X.stroke(); X.restore();
+    if (du > 40) { const a = clamp((du - 40) / 80); ln(ex(530) + 6, ey(390), ex(530 + du) - 10, ey(390), 1.3, PAL.ink, .5 * a); stroke(() => { const x = ex(530 + du) - 10, y = ey(390); X.moveTo(x - 10, y - 6); X.lineTo(x, y); X.lineTo(x - 10, y + 6); }, 1.3, PAL.ink, .5 * a); }
     cut(back, 100, back + 18, 820);                   // back panel
     cut(back, 100, front, 118);                        // bottom
     cut(back - 10, 820, front + 26, 858);              // counter slab
@@ -401,8 +407,9 @@
     X.stroke(); X.restore();
     for (const y of [tiers[0], tiers[0] + 150, tiers[1], tiers[1] + 120]) ln(ex(ub), ey(y), ex(uf), ey(y), y === tiers[0] || y === tiers[1] ? 2.6 : 1.8);
     ln(ex(ub), ey(tiers[0]), ex(ub), ey(tiers[1] + 120), 2.2); ln(ex(uf), ey(tiers[0]), ex(uf), ey(tiers[1] + 120), 2.2);
-    // door (a tall slab) + handle groove
+    // door (a tall slab) + handle groove; the basket frame is fixed to it at both rims
     const d0 = front + du + 2, d1 = d0 + 18;
+    for (const y of [tiers[0], tiers[1] + 120]) ln(ex(uf), ey(y), ex(d0), ey(y), 2.2);
     fillPoly([[ex(d0), ey(812)], [ex(d1), ey(812)], [ex(d1), ey(112)], [ex(d0), ey(112)]], PAL.paper);
     stroke(() => X.rect(ex(d0), ey(812), 18 * EQ, 700 * EQ), 2.4);
     ln(ex(d1), ey(760), ex(d1 + 14), ey(760), 2.4); ln(ex(d1 + 14), ey(760), ex(d1 + 14), ey(700), 2.4); ln(ex(d1 + 14), ey(700), ex(d1), ey(700), 2.4);
@@ -472,7 +479,7 @@
   let FIT0 = null, FIT1 = null;
   function axoCam(t) {
     if (!FIT0) { FIT0 = fitBox(SPTS, [1060, 140, 1760, 1000]); FIT1 = fitBox(KPTS, [600, 142, 1870, 994]); }
-    const k = E.io3((t - T_AXO - .04) / 2.1), drift = 1 - .03 * E.io((t - 106.6) / 2.9);
+    const q = clamp((t - T_AXO - .02) / 2.1), k = .12 * q + .88 * E.io3(q), drift = 1 - .03 * E.io((t - 106.6) / 2.9);
     const sc = Math.exp(lerp(Math.log(FIT0.sc), Math.log(FIT1.sc), k)) * drift;
     const u = (1 / sc - 1 / FIT0.sc) / (1 / (FIT1.sc * drift) - 1 / FIT0.sc || 1);   // dolly-consistent pan
     const c = [lerp(FIT0.c[0], FIT1.c[0], u), lerp(FIT0.c[1], FIT1.c[1], u)], sp = [lerp(FIT0.s[0], FIT1.s[0], u), lerp(FIT0.s[1], FIT1.s[1], u)];
@@ -504,6 +511,8 @@
   }
   function shotAxo(t, lt) {
     paperBG();
+    const punch = t > HIT ? .014 * Math.exp(-(t - HIT) * 9) : 0;       // the drawers slam out: a small camera jolt
+    cam(CX, CY, 1 + punch);
     const { C, sc } = axoCam(t), P2 = p => { const q = C.project(p); return [q[0], q[1]]; };
     const lw = clamp(1.05 / (2.6 * 2 * sc), .22, 1); IW = 2.1 / lw;
     const R3 = prims => render3(prims, C, { style: 'ink', lw });
@@ -531,7 +540,7 @@
     for (let u = BASE.length - 1; u >= 0; u--) {
       const [x0, x1, drs] = BASE[u], P = [];
       P.push(...boxModel(x0, 0, 0, x1, 820, KD, { sides: 'bkr', iw: IW }));
-      drs.forEach(([y0, y1, kind]) => { const e = kind === 'spice' ? 1 : waveK(t, (x0 + x1) / 2, (y0 + y1) / 2); P.push(...drawerPrims(x0, x1, y0, y1, (kind === 'spice' ? 460 : 480) * e, kind)); });
+      drs.forEach(([y0, y1, kind]) => { const e = kind === 'spice' ? lerp(.83, 1, E.soft((t - T_AXO) / .9)) : waveK(t, (x0 + x1) / 2, (y0 + y1) / 2); P.push(...drawerPrims(x0, x1, y0, y1, (kind === 'spice' ? 460 : 480) * e, kind)); });
       if (u === 0) P.push(...boxModel(x0, 0, 0, x0 + 1, 820, KD, { sides: 'l', iw: IW, layer: 2 }));
       P.push(...boxModel(x0 - (u === 0 ? 20 : 0), 820, -10, x1, 860, KD + 40, { sides: 'lrtf', iw: IW, layer: 2 }));
       R3(P);
@@ -553,7 +562,7 @@
       R3(Q);
     }
     // lyric: large, top-left, in the empty triangle above the run (a paper knockout keeps it clean while the camera travels)
-    const R = lyType(33, t, { x: 118, y: 250, sizes: [86, 134], weights: [500, 900], leads: [168], dur: .45, hold: 1 });
+    const R = lyType(33, t, { x: 118, y: 250, sizes: [86, 134], weights: [500, 900], leads: [168], dur: .3, hold: 1 });
     if (R) mono('33 /', 120, 150, { size: 15, a: E.soft((t - 105.2) / .6) });
     // the seal: 到位, stamped in orange on 序 (beat 159)
     const sk = clamp((t - HIT) / .16);
@@ -567,6 +576,7 @@
       X.restore();
       mono('APPROVED · 新秩序', x, y + 86, { size: 13, align: 'center', a: clamp(sk * 2) });
     }
+    camEnd();
     sheet(t, 5);
   }
 

@@ -214,24 +214,24 @@ function shotHook(t, lt) {
 // D1 · 140.645 – 142.690 · WIDE: the formation on the stage, a giant ink basket gliding out behind them
 function shotWide(t, lt, dur) {
   paperBG();
-  const z = 1 + .07 * E.io(lt / (dur + .4)) + .012 * pulse(t, 7);
-  cam(CX, CY + 30, z);
+  const z = .96 + .09 * E.io(lt / (dur + .4)) + .014 * pulse(t, 7);
+  cam(CX, CY + 40, z);
   // a giant 拉 glides in behind them like a drawer (soft-close curve), then gets its orange hatch on the bar
-  const gk = E.soft((t - b(206) + .03) / 1.3), gx0 = CX + 60 + (1 - gk) * 1500;
+  const gk = E.soft((t - b(206) + .3) / 1.4), gx0 = CX + 60 + (1 - gk) * 1500;   // already gliding in on the cut
   text('拉', gx0, 812, { size: 880, font: F.heavy, weight: 900, col: PAL.paper2, align: 'center' });
   const hk = ramp(t, b(208) - .02, .1);
   if (hk > 0) {    // wipe the orange hatch in from the left on the bar
     X.save(); X.beginPath(); X.rect(gx0 - 520, 0, 1040 * E.out5(hk), H); X.clip();
     X.fillStyle = hatchPat(PAL.orange, 18, 3.5); X.font = `900 880px ${F.heavy}`; X.textAlign = 'center'; X.fillText('拉', gx0, 812); X.restore();
   }
-  const fl = 900;
+  const fl = 930;
   handLine(-60, fl, W + 60, fl, { w: 3, seed: 402 });
   X.save(); X.globalAlpha *= .05; rect(-100, fl, W + 200, H, PAL.ink); X.restore();
-  for (let j = 0; j < 5; j++) tapeMark(CX + (j - 2) * 310, fl + 20, 18, j === 2 ? PAL.orange : PAL.ink, 60 + j, j === 2 ? 1 : .5);
+  for (let j = 0; j < 5; j++) tapeMark(CX + (j - 2) * 320, fl + 22, 19, j === 2 ? PAL.orange : PAL.ink, 60 + j, j === 2 ? 1 : .5);
   CREW.forEach((who, i) => { const k = i - 2, lead = who === 'lan';
-    haloFig(CX + k * 310, fl, lead ? 35 : 31, move('pull', t - .035 * Math.abs(k), i * 3 + 1), { who, seed: i * 3 + 1, face: lead ? 'smile' : 'dot', blush: lead ? 1 : 0 }); });
+    haloFig(CX + k * 320, fl, lead ? 39 : 35, move('pull', t - .035 * Math.abs(k), i * 3 + 1), { who, seed: i * 3 + 1, face: lead ? 'smile' : 'dot', blush: lead ? 1 : 0 }); });
   const pk = pulse(t, 9);
-  for (let j = 0; j < 5; j++) stomp(CX + (j - 2) * 310, fl, 31, pk * .9, PAL.ink, 80 + j);
+  for (let j = 0; j < 5; j++) stomp(CX + (j - 2) * 320, fl, 35, pk * .9, PAL.ink, 80 + j);
   camEnd();
   corners(t, { tl: 'DANCE BREAK  ·  拉', br: '▶ 01' });
 }
@@ -241,8 +241,8 @@ function shotWide(t, lt, dur) {
 function cabinetShot(ext, o) {
   const C = frameCam(o.at ?? [0, 230, 460], o.yaw, o.pitch ?? .42, o.sx ?? CX, o.sy ?? CY, o.span ?? 900, o.px ?? 900, { fov: 28 });
   if (o.shadow) {     // soft contact shadow under the carcass footprint
-    const q = [[-360, -20, -40], [360, -20, -40], [360, -20, 520], [-360, -20, 520]].map(p => pin(C, p));
-    X.save(); X.globalAlpha *= .07; X.fillStyle = PAL.ink; smoothPath(q, true); X.fill(); X.restore();
+    const q = [[-300, -20, 0], [300, -20, 0], [300, -20, 470], [-300, -20, 470]].map(p => pin(C, p));
+    X.save(); X.globalAlpha *= .045; X.fillStyle = PAL.ink; smoothPath(q, true); X.fill(); X.restore();
   }
   render3(cabinetPrims(ext, o), C, { style: 'steel', shine: o.shine });
   return C;
@@ -383,7 +383,7 @@ function shotGrid(t, lt) {
   const g = 10, cw = (W - 2 * g) / 3, ch = (H - 2 * g) / 3;
   for (let i = 0; i < 9; i++) {
     const c = i % 3, r = Math.floor(i / 3), x0 = c * (cw + g), y0 = r * (ch + g);
-    const k = E.out5((t - b(215) - RING9[i] * Q * .5 + .05) / .2); if (k <= 0) continue;
+    const k = E.out5((t - b(215) - RING9[i] * Q * .35 + .12) / .2); if (k <= 0) continue;   // centre + cross already in on the beat
     const s = lerp(.6, 1, k);
     X.save(); X.beginPath(); X.rect(x0 + cw / 2 - cw / 2 * s, y0 + ch / 2 - ch / 2 * s, cw * s, ch * s); X.clip();
     X.translate(x0, y0); X.scale(cw / W, ch / H);
@@ -411,22 +411,22 @@ function armsAt(t, seed = 0) {
 }
 function shotOverhead(t, lt, dur) {
   paperBG(PAL.night); DARK = true;
-  const zoom = lerp(1.22, .98, E.soft((t - b(219) + .02) / 1.4)) + .012 * pulse(t, 8);
+  const zoom = lerp(1.12, .94, E.soft((t - b(219) + .02) / 1.4)) + .012 * pulse(t, 8);
   X.save(); X.translate(CX, CY); X.rotate(lt * .06 - .08); X.scale(zoom, zoom); X.translate(-CX, -CY);
   const gr = X.createRadialGradient(CX, CY, 60, CX, CY, 760); gr.addColorStop(0, rgba(PAL.paper, .1)); gr.addColorStop(1, rgba(PAL.paper, 0));
   X.fillStyle = gr; X.fillRect(-600, -600, W + 1200, H + 1200);
   // the giant basket floor, seen straight down: thin steel line art
   const C = camera3({ eye: [0, 1300, 220], at: [0, 60, 220], up: [0, 0, -1], fov: 32 });
-  render3(basketModel({ w: 560, d: 440, h: 150, type: 'plain', gap: 32 }), C, { style: 'ink', inkCol: PAL.steel1, lw: .55, a: .9 });
+  render3(basketModel({ w: 560, d: 440, h: 150, type: 'plain', gap: 32 }), C, { style: 'ink', inkCol: PAL.steel1, lw: .55, a: .6 });
   const n = beatN(t), spin = (n - 218) * Math.PI / 4 + E.out5(sinceBeat(t) / BEAT / .4) * Math.PI / 4;
-  const pk = pulse(t, 5); handCircle(CX, CY, 395 + 50 * (1 - pk), { w: 4, col: PAL.orange, seed: 9, a: pk * .9 });
-  const R = 270;
+  const pk = pulse(t, 5); handCircle(CX, CY, 150 + 60 * (1 - pk), { w: 5, col: PAL.orange, seed: 9, a: pk });
+  const R = 250;
   ['pony', 'buns', 'long', 'kit'].forEach((who, i) => {
     const a = spin + i * Math.PI / 2 + Math.PI / 4, c = Math.cos(a), sn = Math.sin(a), x = CX + c * R, y = CY + sn * R;
-    topFig(x, y, c * 70, sn * 70, 30, a, armsAt(t, i % 2), who, { col: PAL.paper, bg: PAL.night, seed: 30 + i * 7, step: Math.sin(bp(t) * Math.PI) * (i % 2 ? 1 : -1), swing: Math.sin(t * 5 + i) });
+    topFig(x, y, c * 64, sn * 64, 33, a, armsAt(t, i % 2), who, { col: PAL.paper, bg: PAL.night, seed: 30 + i * 7, step: Math.sin(bp(t) * Math.PI) * (i % 2 ? 1 : -1), swing: Math.sin(t * 5 + i) });
   });
   const lf = -spin * .5 + Math.PI / 2;
-  topFig(CX, CY, Math.cos(lf) * 14, Math.sin(lf) * 14, 34, lf, armsAt(t, 2), 'lan', { col: PAL.paper, bg: PAL.night, seed: 7, step: Math.sin(bp(t) * Math.PI) });
+  topFig(CX, CY, Math.cos(lf) * 14, Math.sin(lf) * 14, 38, lf, armsAt(t, 2), 'lan', { col: PAL.paper, bg: PAL.night, seed: 7, step: Math.sin(bp(t) * Math.PI) });
   X.restore();
   corners(t, { col: PAL.paper, tl: 'DANCE BREAK  ·  TOP CAM', br: '▶ 06' });
 }

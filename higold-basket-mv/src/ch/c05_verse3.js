@@ -214,7 +214,7 @@ function shotPantry(t, lt, dur) {
   const ek = E.soft(seg(t, 78.62, 80.2)), ext = 500 * ek;
   const orb = E.io3(seg(t, 78.5, 79.45)), crane = E.io3(seg(t, 79.25, 80.66)), back = E.out(seg(t, 80.66, 81.95));
   const wide = 1 - orb, drift = seg(t, 77.2, 78.6);
-  const ay = lerp(lerp(1720, 430, crane), 1120, wide) + back * 330, span = lerp(lerp(1450, 1520, crane), 2750 - drift * 150, wide) + back * 480;
+  const ay = lerp(lerp(1720, 430, crane), 1120, wide) + back * 330, span = lerp(lerp(1450, 1520, crane), 2500 - drift * 180, wide) + back * 480;
   const yaw = lerp(-1.08, -.46 - drift * .06, wide) - seg(t, 79.6, 81.9) * .08, pitch = lerp(lerp(.3, .4, crane), .16, wide) - back * .1;
   const C = frameCam([0, ay, lerp(330, 560, orb)], yaw, pitch, 1190, 540, span, 1000, { fov: 30 });
   const ro = { style: 'steel', shine: lerp(-200, 1300, seg(t, 78.7, 80.9)) };
@@ -240,6 +240,15 @@ function shotPantry(t, lt, dur) {
     },
   });
 
+  // floor-to-ceiling dimension line (no numbers: 通高), drawn up on 高柜 while the column is still closed
+  const dk = E.soft(seg(t, 77.38, 78.4)), da = 1 - seg(t, 78.6, 78.9);
+  if (dk > 0 && da > 0) {
+    const dx = PT.w / 2 + 170, dz = PT.d + 20, top = lerp(0, 2250, dk);
+    wline(C, [PT.w / 2 + 20, 0, dz], [dx + 40, 0, dz], { w: 1.2, col: PAL.ink2, a: da }); wline(C, [PT.w / 2 + 20, 2250, dz], [dx + 40, 2250, dz], { w: 1.2, col: PAL.ink2, a: da * dk });
+    const s1 = wpath(C, [[dx, 0, dz], [dx, top, dz]], { w: 2.5, a: da }); X.save(); X.globalAlpha *= da; headAt(s1, PAL.ink, 16, 2.5); headAt([s1[1], s1[0]], PAL.ink, 16, 2.5); X.restore();
+    const m = P2(C, [dx, 1125, dz]); text('通高', m[0] + 18, m[1] + 12, { size: 34, font: F.serif, weight: 900, a: da * seg(dk, .5, .9) });
+    text('floor to ceiling', m[0] + 18, m[1] + 48, { size: 26, font: F.serifI, col: PAL.ink2, a: da * seg(dk, .5, .9) });
+  }
   // scroll ruler in the right margin: where the camera is, top → floor
   const rx = W - 124, r0 = 250, r1 = 880, rk = orb < .5 ? 0 : clamp(inv(1720, 430, ay - back * 330));
   line(rx, r0, rx, r1, 2, PAL.ink);
@@ -288,8 +297,8 @@ function shotLift(t, lt, dur) {
   const ro = { style: 'steel', shine: lerp(-600, 700, seg(t, 82.5, 84.9)) };
   // wall: floor line + eye-level line
   wline(C, [-1500, 0, 0], [1600, 0, 0], { w: 1.5, col: PAL.ink2, a: .55 });
-  wline(C, [-1500, 1520, 0], [1600, 1520, 0], { w: 2, col: PAL.ink2, a: .7, dash: [16, 12] });
-  const el = P2(C, [-900, 1520, 0]); text('视平线  ·  eye level', el[0] + 10, el[1] - 16, { size: 28, font: F.serifI, col: PAL.ink2 });
+  wline(C, [-1500, 1480, 0], [1600, 1480, 0], { w: 2, col: PAL.ink2, a: .7, dash: [16, 12] });
+  const el = P2(C, [-1150, 1480, 0]); text('视平线  ·  eye level', el[0] + 10, el[1] - 16, { size: 28, font: F.serifI, col: PAL.ink2 });
   wfill(C, [[-600, 0, -10], [600, 0, -10], [620, 0, 660], [-600, 0, 660]], PAL.ink, .05);
   const arc = (th1, x) => { const pts = []; for (let i = 0; i <= 40; i++) { const a = th1 * i / 40; pts.push([x, 1860 - LD.R + LD.R * Math.cos(a), 300 + LD.R * Math.sin(a)]); } return pts; };
   const F0 = liftSet(C, th, ro, {
@@ -307,7 +316,7 @@ function shotLift(t, lt, dur) {
 // ======================================================================================================
 // LAN meets the lift-down basket (84.87 – 88.145): tiptoe → the basket comes down → flat feet, jar in hand.
 // ======================================================================================================
-const TIP = pose({ dy: .35, sL: 2.78, eL: .05, sR: 1.1, eR: .7, hL: .02, hR: .02, head: .14, lean: -.12 });
+const TIP = pose({ dy: .38, sL: 2.2, eL: .45, sR: .75, eR: .5, hL: .02, hR: .02, head: -.1, lean: -.1 });
 const REACH = pose({ sL: 1.72, eL: .15, sR: .3, eR: .35, hL: .1, hR: .1, head: -.05, lean: -.05 });
 const PROUD = pose({ sL: 2.5, eL: .35, sR: .9, eR: -1.9, hL: .12, hR: .12, head: .08 });
 function shotTiptoe(t, lt, dur) {
@@ -316,13 +325,13 @@ function shotTiptoe(t, lt, dur) {
   const C = frameCam([330, 1080, 420], .1 - push * .04, .03, 1180, 548, 2650 - push * 140, 1000, { fov: 30 });
   const ro = { style: 'steel', shine: lerp(-600, 800, seg(t, 86, 87.6)) };
   wline(C, [-1500, 0, 0], [2400, 0, 0], { w: 1.5, col: PAL.ink2, a: .55 });
-  wline(C, [-1500, 1520, 0], [2400, 1520, 0], { w: 2, col: PAL.ink2, a: .4, dash: [16, 12] });
+  wline(C, [-1500, 1480, 0], [2400, 1480, 0], { w: 2, col: PAL.ink2, a: .4, dash: [16, 12] });
   wfill(C, [[-600, 0, -10], [600, 0, -10], [620, 0, 660], [-600, 0, 660]], PAL.ink, .05);
   const take = t > 87.42;
   liftSet(C, th, ro, { take });
 
   // LAN stands beside the counter; scale from the camera so she matches the set (≈160 mm per body unit)
-  const g = C.project([860, 0, 700]), s = g[3] * 160, lw = .12;
+  const g = C.project([660, 0, 700]), s = g[3] * 160, lw = .12;
   const land = E.out5(seg(t, 86.7, 86.9)), lift = E.out5(seg(t, 87.42, 87.62));
   let P = lerpPose(TIP, REACH, land); if (lift > 0) P = lerpPose(P, PROUD, lift);
   if (land < 1) { const w = Math.sin(t * 8.5) * (1 - land); P = { ...P, lean: P.lean + w * .05, dy: P.dy + Math.abs(Math.sin(t * 17)) * .05 * (1 - land) }; }
@@ -336,7 +345,8 @@ function shotTiptoe(t, lt, dur) {
     const [hx, hy, hr] = fig.head, bk = pulse(t, 5);
     inkStroke([[hx + hr * 1.45, hy - hr * .35], [hx + hr * 1.95, hy - hr * .55]], { w: 3.5, seed: 3 });
     inkStroke([[hx + hr * 1.5, hy + hr * .1], [hx + hr * 2.0, hy + hr * .15]], { w: 3.5, seed: 4 });
-    fillPoly([[hx - hr * 1.3, hy - hr * .7 + bk * 5], [hx - hr * 1.48, hy - hr * .2 + bk * 5], [hx - hr * 1.12, hy - hr * .2 + bk * 5]], PAL.ink, .9);
+    X.save(); X.translate(hx + hr * 1.25, hy - hr * 1.05 + bk * 5); X.beginPath(); X.moveTo(0, -hr * .32); X.quadraticCurveTo(hr * .2, 0, 0, hr * .12); X.quadraticCurveTo(-hr * .2, 0, 0, -hr * .32);
+    X.fillStyle = PAL.paper; X.fill(); X.strokeStyle = PAL.ink; X.lineWidth = 3; X.stroke(); X.restore();
   }
   if (take) {   // the jar she took
     const [hx, hy] = fig.handL, js = s * .55;
@@ -355,8 +365,8 @@ function shotTiptoe(t, lt, dur) {
 // A museum vitrine on a plinth holds the habit 蹲下翻找 as a plaster statue (a figure squatting with its head in a cabinet).
 // E1: the gallery, slow push-in, the wall label. E2 (cut on 退): the crew claps, a 荣休 rosette, a system toast.
 // ======================================================================================================
-const MU = { fy: 872, px0: 1060, px1: 1440, py: 604, gx0: 1074, gx1: 1426, gy: 236, dx: 36, dy: -26, cx: 1250, sx: 1000 };
-const STATUE = pose({ lean: 1.12, head: .2, sL: -.12, eL: .12, sR: .28, eR: .15, hL: .7, kL: 1.9, hR: .7, kR: 1.9 });
+const MU = { fy: 872, px0: 1040, px1: 1460, py: 604, gx0: 1054, gx1: 1446, gy: 226, dx: 36, dy: -26, cx: 1250, sx: 1000 };
+const STATUE = pose({ lean: 1.12, head: .22, sL: -.12, eL: .12, sR: .28, eR: .15, hL: .55, kL: 1.1, hR: .55, kR: 1.1 });
 function museumWall(t) {
   // floor line + skirting, a ceiling track with one spotlight
   handLine(-20, MU.fy, W + 20, MU.fy, { w: 2.5, seed: 501 }); line(0, MU.fy - 12, W, MU.fy - 12, 1, PAL.ink2, .35);
@@ -381,21 +391,21 @@ function spotlight(t, a = 1) {
 }
 function statue(t, o = {}) {
   // plaster figure squatting, head and arms swallowed by a small cabinet (the old habit, frozen)
-  const gy = MU.py - 8, bx = 1214, cw = 160, ch = 160, bt = gy - ch;
+  const gy = MU.py - 8, fx = 1118, s = 29, bx = fx + 96, cw = 176, ch = 196, bt = gy - ch;
   // plaque under the group
-  fillPoly([[1100, gy + 4], [1400, gy + 4], [1410, gy - 4], [1110, gy - 4]], PAL.paper2);
-  inkStroke([[1100, gy + 4], [1400, gy + 4], [1410, gy - 4]], { w: 1.8, col: PAL.ink2, seed: 88, taper: [.01, .01] });
-  figure(1146, gy, 24, STATUE, { who: 'statue', col: PAL.ink2, face: 'closed', seed: 77, shadow: false, fill: PAL.paper, w: .17 });
+  fillPoly([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4], [1080, gy - 4]], PAL.paper2);
+  inkStroke([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4]], { w: 1.8, col: PAL.ink2, seed: 88, taper: [.01, .01] });
+  figure(fx, gy, s, STATUE, { who: 'statue', col: PAL.ink, face: 'closed', seed: 77, shadow: false, fill: PAL.paper, w: .19 });
   // the cabinet: dark interior swallowing head and arms, carcass edges, the door swung open
-  rect(bx, bt, cw, ch, PAL.paper, 0);
-  rect(bx + 12, bt + 12, cw - 24, ch - 24, PAL.ink, .94);
-  X.save(); X.beginPath(); X.rect(bx, bt, cw, ch); X.rect(bx + 12, bt + 12, cw - 24, ch - 24); X.fillStyle = PAL.paper; X.fill('evenodd'); X.restore();
-  handRect(bx, bt, cw, ch, { w: 2.6, seed: 91, over: 3, col: PAL.ink2 });
-  handRect(bx + 12, bt + 12, cw - 24, ch - 24, { w: 1.6, seed: 95, over: 0, col: PAL.ink2 });
-  fillPoly([[bx + cw, bt], [bx + cw + 40, bt - 16], [bx + cw + 40, gy + 2], [bx + cw, gy]], PAL.paper);
-  inkStroke([[bx + cw, bt], [bx + cw + 40, bt - 16], [bx + cw + 40, gy + 2], [bx + cw, gy]], { w: 2.4, col: PAL.ink2, seed: 92, taper: [.02, .02] });
+  X.save(); X.beginPath(); X.rect(bx, bt, cw, ch); X.rect(bx + 14, bt + 14, cw - 28, ch - 28); X.fillStyle = PAL.paper; X.fill('evenodd'); X.restore();
+  rect(bx + 14, bt + 14, cw - 28, ch - 28, PAL.ink);
+  handRect(bx, bt, cw, ch, { w: 3, seed: 91, over: 3 });
+  handRect(bx + 14, bt + 14, cw - 28, ch - 28, { w: 1.6, seed: 95, over: 0 });
+  X.save(); X.globalAlpha *= .5; hatch([[bx, bt], [bx + cw, bt], [bx + cw, bt + 14], [bx, bt + 14]], { gap: 6, w: 1, angle: -.8, seed: 5 }); X.restore();
+  fillPoly([[bx + cw, bt], [bx + cw + 38, bt - 18], [bx + cw + 38, gy + 2], [bx + cw, gy]], PAL.paper);
+  inkStroke([[bx + cw, bt], [bx + cw + 38, bt - 18], [bx + cw + 38, gy + 2], [bx + cw, gy]], { w: 2.6, seed: 92, taper: [.02, .02] });
   if (o.hat > 0) {   // a tiny party hat on the retiree's cabinet
-    const k = E.back(o.hat, 2.4), hx = bx + cw * .5, hy = bt;
+    const k = E.back(o.hat, 2.4), hx = bx + cw * .5, hy = bt - 2;
     X.save(); X.translate(hx, hy); X.scale(k, k); X.rotate(.12);
     fillPoly([[-22, 0], [22, 0], [0, -62]], PAL.orange); inkStroke([[-22, 0], [0, -62], [22, 0]], { w: 2.4, seed: 97, taper: [.02, .02] });
     for (const u of [.35, .7]) line(lerp(-22, 0, u), lerp(0, -62, u), lerp(22, 0, u), lerp(0, -62, u), 2, PAL.paper, .9);
@@ -462,12 +472,17 @@ function shotMuseum(t, lt, dur) {
   vcol(27, t, 410, 150, 116, { rule: 600, hold: .6 });
   cropMarks();
 }
-const CLAP_A = pose({ sL: .5, eL: -3.45, sR: .5, eR: -3.45, hL: .12, hR: .12 });
-const CLAP_B = pose({ sL: .55, eL: -2.95, sR: .55, eR: -2.95, hL: .12, hR: .12, dy: -.05 });
+const CLAP_A = pose({ sL: 1.25, eL: -3.35, sR: 1.25, eR: -3.35, hL: .12, hR: .12 });
+const CLAP_B = pose({ sL: 1.18, eL: -2.95, sR: 1.18, eR: -2.95, hL: .12, hR: .12, dy: -.05 });
 function clapper(x, y, s, who, t, seed, o = {}) {
   const ph = sinceBeat(t + (o.delay ?? 0)) / BEAT, k = ph < .18 ? E.out5(ph / .18) : 1 - E.io((ph - .18) / .82);
   const P = lerpPose(CLAP_A, CLAP_B, k); P.head = .06 * Math.sin(t * 2 + seed); P.lean = .03 * Math.sin(t * 1.7 + seed);
-  return figure(x, y, s, P, { who, seed, face: o.face ?? 'happy', w: .16 });
+  const f = figure(x, y, s, P, { who, seed, face: o.face ?? 'happy', w: .16 });
+  if (ph < .35) {   // clap ticks
+    const cx = (f.handL[0] + f.handR[0]) / 2, cy = (f.handL[1] + f.handR[1]) / 2, a = 1 - ph / .35, r0 = s * .7, r1 = s * (1.1 + ph * 1.5);
+    for (const ang of [-2.2, -1.57, -.94]) line(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0, cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1, 3, PAL.ink, a);
+  }
+  return f;
 }
 function bouquet(x, y, s) {
   for (const [dx, dy, r] of [[-.35, -.75, .32], [.1, -.95, .36], [.45, -.62, .3]]) { circle(x + dx * s, y + dy * s, r * s, { fill: PAL.orange }); handCircle(x + dx * s, y + dy * s, r * s, { w: 2.2, seed: 602 + dx * 10 }); }

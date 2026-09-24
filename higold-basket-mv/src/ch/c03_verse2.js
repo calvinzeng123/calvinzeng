@@ -158,15 +158,16 @@
     lyHero(12, t, { x: LX, y: 500, size: 128, lead: 1.24, align: 'left', hi: '两', exit: 'fade', hold: .5, fade: .12 });
     counter(t < tSnap ? 1 : 2, t - tSnap);
   }
-  // plates + a bowl inside a pulled basket (drawn in the basket's top opening)
+  // plates standing in the comb + a bowl, seen over the rim (clipped to the basket interior)
   function basketItems(fx, fy, x, y, w, h) {
-    X.save(); X.strokeStyle = PAL.ink; X.lineWidth = Math.max(1, w / 180); X.fillStyle = PAL.paper;
-    for (let i = 0; i < 5; i++) {
-      const q = .15 + i * .15, px = lerp(fx, x, q) + w * .22, py = lerp(fy, y, q);
-      X.beginPath(); X.ellipse(px, py - h * .02, w * .13, h * .2, 0, Math.PI, TAU); X.fill(); X.stroke();
+    X.save(); poly([[fx, fy], [x, y], [x + w, y], [fx + w, fy]]); X.clip();
+    X.strokeStyle = PAL.ink; X.lineWidth = Math.max(1.2, w / 170); X.fillStyle = PAL.paper;
+    for (let i = 4; i >= 0; i--) {
+      const q = .12 + i * .17, px = lerp(fx, x, q) + w * .3, py = lerp(fy, y, q) + h * .2, r = w * .15;
+      X.beginPath(); X.arc(px, py, r, Math.PI, TAU); X.closePath(); X.fill(); X.stroke();
     }
-    const bx = lerp(fx, x, .4) + w * .72, by = lerp(fy, y, .4);
-    X.beginPath(); X.ellipse(bx, by, w * .11, h * .07, 0, 0, TAU); X.fill(); X.stroke();
+    const bx = lerp(fx, x, .45) + w * .74, by = lerp(fy, y, .45) + h * .06;
+    X.beginPath(); X.ellipse(bx, by, w * .12, h * .1, 0, Math.PI, TAU); X.closePath(); X.fill(); X.stroke();
     X.restore();
   }
 
@@ -237,7 +238,7 @@
     return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), nx: dy / d, ny: -dx / d, u: lerp(a.u, b.u, k) };
   }
   // characters of row 2, placed along the inside of the curve, spaced evenly in screen space (walk back from near u = .97)
-  const CSZ = 82, CSP = CSZ * 1.12, COFF = CSZ * .78;
+  const CSZ = 82, CSP = CSZ * 1.14, COFF = CSZ * .98;
   const CPOS = (() => {
     const out = []; let s = arcU(.975);
     const off = s => { const p = arcAt(s); return [p.x + p.nx * COFF, p.y + p.ny * COFF, s]; };
@@ -430,38 +431,40 @@
     const PX = 1296;
     // --- game view (clipped), with a punch-in on 饭
     X.save(); X.beginPath(); X.rect(0, 0, PX, H); X.clip();
-    const punch = t >= B(74), z = punch ? 1.42 + .05 * (t - B(74)) : 1 + .02 * lt;
-    cam(punch ? 820 : 700, punch ? 700 : 560, z);
-    // horizontal speed streaks
-    for (let i = 0; i < 18; i++) {
+    const punch = t >= B(74), z = punch ? 1.24 + .05 * (t - B(74)) : 1 + .025 * lt;
+    X.translate(PX / 2 - CX, 0);
+    cam(punch ? 572 : 648, punch ? 640 : 560, z, punch ? -.055 : 0);
+    for (let i = 0; i < 18; i++) {                        // horizontal speed streaks
       const y = 140 + hash(i * 2.3) * 860, l = 120 + hash(i * 5.1) * 360, x = PX + 400 - ((t * (1800 + hash(i) * 1400) + hash(i * 9) * 3000) % (PX + 900));
       line(x, y, x + l, y, 2 + hash(i * 4) * 2, PAL.ink, .12);
     }
     const fy = 960;
-    handLine(-200, fy, PX + 200, fy, { w: 3, seed: 330 });
-    // base cabinet with a pulled basket (left) — pull pulses on every beat
-    handRect(200, 760, 360, 200, { w: 3, seed: 331, over: 3 });
-    rect(186, 742, 390, 18, PAL.ink);
-    const pe = .55 + .25 * E.soft(sinceBeat(t) / .35) * (1 - E.io(clamp((sinceBeat(t) - .38) / .3)));
-    drawer(222, 790, 316, 138, pe, { dir: -1, seed: 332, hand: true, lw: 2.6, items: basketItems });
-    // stove counter (right)
-    handRect(930, 790, 320, 170, { w: 3, seed: 333, over: 3 }); rect(916, 772, 348, 18, PAL.ink);
-    const px0 = 1090, py0 = 772;
-    handRect(px0 - 90, py0 - 110, 180, 110, { w: 3.5, seed: 334, over: 2 });
-    line(px0 - 118, py0 - 90, px0 - 90, py0 - 90, 5); line(px0 + 90, py0 - 90, px0 + 118, py0 - 90, 5);
-    for (let i = 0; i < 3; i++) { const sx = px0 - 44 + i * 44, ph = t * 9 + i; inkStroke([[sx, py0 - 130], [sx + 10 * Math.sin(ph), py0 - 170], [sx - 10 * Math.sin(ph + 1), py0 - 210], [sx + 6 * Math.sin(ph + 2), py0 - 245]], { w: 3, seed: 335 + i, taper: [.2, .6], a: .7 }); }
-    for (let i = 0; i < 3; i++) { const fx = px0 - 40 + i * 40, fh = 18 + 8 * Math.sin(t * 30 + i * 2); fillPoly([[fx - 10, py0], [fx, py0 - fh], [fx + 10, py0]], PAL.orange); }
-    // LAN in fast-forward: rapid reach/yank, with two ghost exposures
+    handLine(-300, fy, PX + 300, fy, { w: 3, seed: 330 });
+    // base cabinet with a pulled basket (left) — it re-pulls on every beat
+    handRect(130, 770, 350, 190, { w: 3, seed: 331, over: 3 }); rect(116, 752, 378, 18, PAL.ink);
+    const pe = .5 + .3 * E.soft(sinceBeat(t) / .3) * (1 - E.io(clamp((sinceBeat(t) - .36) / .3)));
+    drawer(154, 800, 302, 132, pe, { dir: -1, seed: 332, hand: true, lw: 2.8, items: basketItems });
+    // stove counter + pot (middle)
+    handRect(560, 800, 340, 160, { w: 3, seed: 333, over: 3 }); rect(546, 782, 368, 18, PAL.ink);
+    const px0 = 730, py0 = 782, lid = Math.abs(Math.sin(t * 22)) * 26;
+    for (let i = 0; i < 3; i++) { const fx = px0 - 44 + i * 44, fh = 16 + 8 * Math.sin(t * 30 + i * 2); fillPoly([[fx - 11, py0], [fx, py0 - fh], [fx + 11, py0]], PAL.orange); }
+    inkPoly([[px0 - 100, py0 - 128], [px0 + 100, py0 - 128], [px0 + 94, py0 - 22], [px0 + 70, py0 - 4], [px0 - 70, py0 - 4], [px0 - 94, py0 - 22]], { fill: PAL.paper, w: 3.5, seed: 334 });
+    line(px0 - 130, py0 - 104, px0 - 100, py0 - 104, 6); line(px0 + 100, py0 - 104, px0 + 130, py0 - 104, 6);
+    X.save(); X.translate(px0, py0 - 132 - lid); X.rotate(Math.sin(t * 17) * .12);
+    inkPoly([[-108, 0], [108, 0], [80, -26], [-80, -26]], { fill: PAL.paper, w: 3.2, seed: 336 }); rect(-14, -40, 28, 14, PAL.ink); X.restore();
+    for (let i = 0; i < 3; i++) { const sx = px0 - 50 + i * 50, ph = t * 9 + i; inkStroke([[sx, py0 - 170 - lid], [sx + 10 * Math.sin(ph), py0 - 205], [sx - 10 * Math.sin(ph + 1), py0 - 240], [sx + 6 * Math.sin(ph + 2), py0 - 272]], { w: 3, seed: 335 + i, taper: [.2, .6], a: .6 }); }
+    // LAN at the stove in fast-forward: rapid reach/yank toward the pot, with two ghost exposures
     const lp = tt => { const q = .5 + .5 * Math.sin(tt * 26); return lerpPose(mirrorPose(KP.reach), KP.yank, q); };
-    for (const [dt, a] of [[.05, .16], [.025, .3]]) figure(780, fy, 34, lp(t - dt), { who: 'lan', a, shadow: false, seed: 50 });
-    figure(780, fy, 34, lp(t), { who: 'lan', face: 'wow', blush: 1, seed: 50 });
-    // kitchenware flying basket → pot on a 16th-note conveyor
+    const lx = 990;
+    for (const [dt, a] of [[.05, .15], [.025, .3]]) figure(lx, fy, 38, lp(t - dt), { who: 'lan', a, shadow: false, seed: 50 });
+    figure(lx, fy, 38, lp(t), { who: 'lan', face: 'wow', blush: 1, seed: 50 });
+    // kitchenware flying basket → pot on an 8th-note conveyor
     for (let j = 0; j < 6; j++) {
-      const per = BEAT / 2, ph = (t - RUN0) / per - j * (1 / 6) * 2; const q = frac(ph), id = Math.floor(ph);
-      if (ph < 0) continue;
-      const x = lerp(430, px0, q), y = lerp(760, py0 - 100, q) - Math.sin(q * Math.PI) * 190;
-      icon((id + j) % 3, x, y, 34, q * 7 + j);
-      line(x - 70, y + 10 * Math.cos(q * Math.PI), x - 26, y, 3, PAL.ink, .3);
+      const per = BEAT / 2, ph = (t - RUN0) / per - j / 3; if (ph < 0) continue;
+      const q = frac(ph), id = Math.floor(ph);
+      const x = lerp(300, px0, q), y = lerp(770, py0 - 150, q) - Math.sin(q * Math.PI) * 120;
+      icon((id + j) % 3, x, y, 32, q * 7 + j);
+      line(x - 70, y + 20 * Math.cos(q * Math.PI), x - 28, y + 6 * Math.cos(q * Math.PI), 3, PAL.ink, .3);
     }
     camEnd();
     // HUD corner in the game view
@@ -470,7 +473,7 @@
     // --- splits column
     splitsPanel(t, PX, 0, W - PX, H);
     // --- lyric (screen-fixed across the punch-in)
-    lyHero(15, t, { x: LX, y: 300, size: 140, lead: 1.1, align: 'left', font: F.smiley, weight: 400, hi: '速通', exit: 'fade', hold: .15, fade: .12, pop: 1.5 });
+    lyHero(15, t, { x: LX, y: 270, size: 140, lead: 1.1, align: 'left', font: F.smiley, weight: 400, hi: '速通', exit: 'fade', hold: .15, fade: .12, pop: 1.5 });
   }
 
   // ================================================================ SHOT 6a · WR pace, the timer blurs (52.008 – 52.690)
