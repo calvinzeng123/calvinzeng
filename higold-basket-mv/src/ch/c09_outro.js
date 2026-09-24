@@ -299,8 +299,6 @@ function shotWide(t, lt, dur) {
     tapeMark(x, y + 26, 20, lead ? PAL.orange : PAL.ink, 60 + i, lead ? 1 : .5);
     haloFig(x, y, s, P, { who, seed: i * 3 + 1, face: lead ? 'smile' : 'dot', blush: lead ? 1 : 0 });
     stomp(x, y, s, Math.max(stompAt(t - d, t0), stompAt(t - d, t0 + 2 * E8 + .3)), PAL.ink, 80 + i);
-    const jl = ramp(t - d, t0 + 2 * E8, .1) * (1 - ramp(t - d, t0 + 2 * E8 + .22, .08));
-    for (let m = 0; m < 3; m++) line(x - 26 + m * 26, y - 40, x - 26 + m * 26, y + 60, 3, PAL.ink, .45 * jl);
   }
   camEnd();
   corners(t, { tl: 'DANCE BREAK  ·  拉', br: '▶ 01' });
@@ -323,7 +321,7 @@ function shotExploded(t, lt, dur) {
   dotGrid(24, 24, W, H, 48, 1.5, PAL.ink, .1);
   const e = E.out5((t - b(208) + .02) / .32) * (1 - E.soft((t - b(209) + .02) / .75));
   punchCam(t, .8, CX, CY, 1);
-  const C = frameCam([0, 250, 380], lerp(.95, .7, E.io(lt / (dur + .3))), .36, CX + 40, 600, 1250, 1180, { fov: 28 });
+  const C = frameCam([0, 300, 430], lerp(.9, .68, E.io(lt / (dur + .3))), .34, CX + 30, 560, 1100, 1450, { fov: 28 });
   // exploded-drawing guides
   const g = (a, c) => { const p = pin(C, a), q = pin(C, c); X.save(); X.setLineDash([7, 9]); X.strokeStyle = PAL.ink2; X.globalAlpha *= .55 * clamp(e * 3); X.lineWidth = 2; X.beginPath(); X.moveTo(p[0], p[1]); X.lineTo(q[0], q[1]); X.stroke(); X.restore(); };
   if (e > .02) { g([0, 190, 460], [0, 190, 460 + 420 * e]); g([-294, 142, 220], [-294 - 230 * e, 142, 220]); g([294, 142, 220], [294 + 230 * e, 142, 220]); g([-146, 196, 160], [-146, 196 + 330 * e, 160]); g([158, 60, 130], [158, 60 + 290 * e, 130]); }
