@@ -96,29 +96,24 @@ function lyDrawers(i, t, o = {}) {
 // big type with a night "moat" (thick night stroke under the fill) so it reads over line work. Rows can scale.
 function lySlam(i, t, o = {}) {
   const env = lyEnv(i, t, o.hold ?? .3, .2); if (env <= 0) return; LYRIC_DRAWN.add(i);
-  const rows = lyRows(i), font = o.font ?? F.heavy, wt = o.weight ?? 900;
-  X.save(); X.globalAlpha *= env;
+  const rows = lyRows(i), font = o.font ?? F.heavy, wt = o.weight ?? 900, lay = [];
   let y = o.y ?? 400;
-  rows.forEach((row, r) => {
+  rows.forEach((row, r) => {   // layout first, so every row's moat can be painted before any row's fill
     const sz = (o.size ?? 150) * (o.rowScale?.[r] ?? 1), tr = o.track ?? -sz * .02;
     const ws = row.map(c => measure(c.ch, sz, font, wt) + tr), tw = ws.reduce((s, w) => s + w, 0) - tr;
-    const x0 = (o.x ?? 110) - (o.align === 'center' ? tw / 2 : o.align === 'right' ? tw : 0) + (o.indent?.[r] ?? 0);
-    for (const pass of [0, 1]) {
-      let x = x0;
-      row.forEach((c, j) => {
-        const k = chK(c.ti, t, .2);
-        if (k > 0) {
-          const s = lerp(1.3, 1, E.out5(k)), dy = (1 - E.out5(k)) * -sz * .15, hot = (o.hi ?? '').includes(c.ch), cx = x + ws[j] / 2, cy = y - sz * .38;
-          X.save(); X.translate(cx, cy + dy); X.scale(s, s); X.translate(-cx, -cy);
-          if (pass === 0) text(c.ch, x, y, { size: sz, font, weight: wt, col: null, stroke: PAL.night, sw: sz * (o.moat ?? .22), a: clamp(k * 3) });
-          else text(c.ch, x, y, { size: sz, font, weight: wt, col: hot ? PAL.orange : (o.col ?? PAL.paper), a: clamp(k * 3) });
-          X.restore();
-        }
-        x += ws[j];
-      });
-    }
+    let x = (o.x ?? 110) - (o.align === 'center' ? tw / 2 : o.align === 'right' ? tw : 0) + (o.indent?.[r] ?? 0);
+    row.forEach((c, j) => { lay.push({ c, x, y, sz }); x += ws[j]; });
     y += sz * (o.lead ?? 1.1);
   });
+  X.save(); X.globalAlpha *= env;
+  for (const pass of [0, 1]) for (const { c, x, y: yy, sz } of lay) {
+    const k = chK(c.ti, t, .2); if (k <= 0) continue;
+    const s = lerp(1.3, 1, E.out5(k)), dy = (1 - E.out5(k)) * -sz * .15, hot = (o.hi ?? '').includes(c.ch), w = measure(c.ch, sz, font, wt), cx = x + w / 2, cy = yy - sz * .38;
+    X.save(); X.translate(cx, cy + dy); X.scale(s, s); X.translate(-cx, -cy);
+    if (pass === 0) text(c.ch, x, yy, { size: sz, font, weight: wt, col: null, stroke: PAL.night, sw: sz * (o.moat ?? .22), a: clamp(k * 3) });
+    else text(c.ch, x, yy, { size: sz, font, weight: wt, col: hot ? PAL.orange : (o.col ?? PAL.paper), a: clamp(k * 3) });
+    X.restore();
+  }
   X.restore();
 }
 // E: reverse-explosion type — each character flies in from a scattered spot and locks into its slot exactly on its onset
@@ -353,7 +348,7 @@ function shotGalaxy(t, lt) {
   if (kp < .45) {
     const cn = [[-316, 10], [316, 10], [316, 330], [-316, 330]].map(([x, y]) => pin(C, [x, y, 462 + ext]));
     X.beginPath(); cn.forEach((q, m) => m ? X.lineTo(q[0], q[1]) : X.moveTo(q[0], q[1])); X.closePath();
-    glowStroke(4, (.6 + .4 * pulse(t, 5)) * (1 - clamp(kp / .45)), PAL.shine, 5, .35);
+    glowStroke(6, (.7 + .3 * pulse(t, 5)) * (1 - clamp(kp / .45)), PAL.shine, 5, .45);
   }
   galaxy({ ...G, half: 'near' }, t);
   // the white-hot core wells up out of the basket
@@ -370,7 +365,7 @@ function shotGalaxy(t, lt) {
   const sc = clamp((fy - hd[1]) / -dry.handL[1], 5, 160), lx = hd[0] - dry.handL[0] * sc;
   figure(lx, fy, sc, Pz, { who: 'lan', col: PAL.paper, dark: true, face: kp > .1 ? 'wow' : 'smile', blush: 1, shadow: false });
   for (const b of [167, 168]) { const s2 = t - beatT(b); if (s2 > 0 && s2 < .4) sparkle(G.x + (b === 167 ? 520 : -470), G.y + (b === 167 ? -230 : 170), 34, { col: PAL.shine, k: Math.sin(s2 / .4 * Math.PI) }); }
-  lySlam(35, t, { x: 100, y: 220, size: 150, rowScale: [.8, 1], hi: '拉', lead: 1.14, moat: .26 });
+  lySlam(35, t, { x: 100, y: 210, size: 150, rowScale: [.8, 1], hi: '拉', lead: 1.24, moat: .26 });
 }
 
 // =====================================================================================================================
