@@ -101,7 +101,7 @@
           // PULLED into its slot from the right on the drawer curve; seats exactly on its onset (the beat), streaks decay after
           const kp = E.soft((t - c.ti + .2) / .24), off = (1 - kp) * (o.pullDist ?? 1100), sk = 1 - clamp((t - c.ti) / .22);
           for (let q = 0; q < 7; q++) {
-            const yy = y - size * (.1 + q * .12), len = off * (.35 + hash(q * 3.1) * .6) + 70 * sk, x0 = x + w * .62 + off + (hash(q) - .5) * 60;
+            const yy = y - size * (.1 + q * .12), len = off * (.35 + hash(q * 3.1) * .6) + 70 * sk, x0 = x + w - track + off - 6 + hash(q) * 30;
             if (len > 8) inkStroke([[x0, yy], [x0 + len, yy]], { w: 10 * Math.max(1 - kp, sk * .6) + 2, col, taper: [.05, .9], wob: .4, seed: 700 + q, a: .85 * Math.max(1 - kp * .8, sk * .7) });
           }
           const sq = 1 + .12 * (1 - kp);
@@ -190,7 +190,7 @@
         else if (t < T6[3]) hx = Math.min(home(1), handsOf(gx, gy, s, P, o).handR[0]);
         else {
           const held = Math.min(home(1), handsOf(gx, gy, s, poseAt(T6[3] - .001, HOOK_KEYS), o).handR[0]);
-          hx = lerp(held, home(1), E.soft((t - T6[3]) / .45)); a *= 1 - clamp((t - T6[3] - .34) / .14);
+          hx = lerp(held, home(1), E.soft((t - T6[3]) / .3)); a *= 1 - clamp((t - T6[3] - .18) / .1);
         }
         pullDrawer(gx, gy, s, 1, hx, a, T6[1], t);
       }
