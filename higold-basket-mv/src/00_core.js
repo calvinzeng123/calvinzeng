@@ -1,7 +1,7 @@
 // 00_core.js — math, easing, deterministic randomness, song timing. Everything here is pure.
 // Canvas: 1920×1080 logical px, y down. Every frame is a pure function of song time t (frames render out of order).
 'use strict';
-const W = 1920, H = 1080, CX = W / 2, CY = H / 2, TAU = Math.PI * 2, DUR = 156.6, FPS = 24;
+const W = 1920, H = 1080, CX = W / 2, CY = H / 2, TAU = Math.PI * 2, DUR = 156.12, FPS = 24;
 
 // ---------- math ----------
 const clamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
@@ -53,19 +53,30 @@ function fbm(x, y, o = 4) { let s = 0, a = .5, f = 1; for (let k = 0; k < o; k++
 let T = 0, BOIL = 0;
 function jit(seed, amp = 1) { return (hash(seed * 13.37 + BOIL * 7.77) * 2 - 1) * amp; }
 
-// ---------- song timing (88 BPM; grid verified against the audio's onset flux) ----------
-const BPM = 88, BEAT = 60 / BPM, BAR = BEAT * 4, OFFSET = 0.19;
-const bp = t => (t - OFFSET) / BEAT;                  // beat position (float)
+// ---------- song timing (measured beat map, see 00_beats.js; 4/4, BAR0 = beat index of the first downbeat) ----------
+const BEAT = (BEATMAP[BEATMAP.length - 1] - BEATMAP[0]) / (BEATMAP.length - 1), BAR = BEAT * 4;
+let BAR0 = 0;                                          // set in 00_beats.js / timeline once the downbeat phase is known
+function bp(t) {                                       // beat position (float): interpolated through the beat map
+  const B = BEATMAP, n = B.length;
+  if (t <= B[0]) return (t - B[0]) / (B[1] - B[0]);
+  if (t >= B[n - 1]) return n - 1 + (t - B[n - 1]) / (B[n - 1] - B[n - 2]);
+  let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (B[m] <= t) lo = m; else hi = m; }
+  return lo + (t - B[lo]) / (B[lo + 1] - B[lo]);
+}
+function beatT(x) {                                    // time of (fractional) beat index x
+  const B = BEATMAP, n = B.length;
+  if (x <= 0) return B[0] + x * (B[1] - B[0]);
+  if (x >= n - 1) return B[n - 1] + (x - n + 1) * (B[n - 1] - B[n - 2]);
+  const i = Math.floor(x); return lerp(B[i], B[i + 1], x - i);
+}
 const beatN = t => Math.floor(bp(t));
-const beatT = n => OFFSET + n * BEAT;                 // time of beat n
-const barN = t => Math.floor(bp(t) / 4);
-const snapBeat = t => beatT(Math.round(bp(t)));       // nearest beat time
-// 1 on each beat, decaying; k = decay per beat (bigger = snappier)
+const barN = t => Math.floor((bp(t) - BAR0) / 4);
+const barT = k => beatT(BAR0 + k * 4);                 // time of bar k's downbeat
+const snapBeat = t => beatT(Math.round(bp(t)));
 const pulse = (t, k = 6) => Math.exp(-frac(bp(t)) * k);
 const pulse8 = (t, k = 6) => Math.exp(-frac(bp(t) * 2) * k);
-const pulseBar = (t, k = 4) => Math.exp(-frac(bp(t) / 4) * k * 4);
-// age (s) since the most recent beat at or before t
-const sinceBeat = t => frac(bp(t)) * BEAT;
+const pulseBar = (t, k = 4) => Math.exp(-frac((bp(t) - BAR0) / 4) * k * 4);
+const sinceBeat = t => t - beatT(Math.floor(bp(t)));
 
 // ---------- keyframes ----------
 // kf(t, [[t0, v0], [t1, v1], …], ease?) → value (numbers or arrays). Holds ends.

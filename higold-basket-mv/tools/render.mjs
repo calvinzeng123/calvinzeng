@@ -15,9 +15,9 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
-const DUR = 156.6, fps = +(args.fps || 24);
+const DUR = 156.12, fps = +(args.fps || 24);
 const FRAMES_DIR = args.dir || 'out/frames';
-const SONG = '.cache/song.mp3';
+const SONG = '.cache/song.wav';
 const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { stdio: 'inherit' }); p.on('close', c => c ? bad(new Error(cmd + ' exited ' + c)) : ok()); });
 
 if (args.encode) {

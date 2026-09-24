@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 const require = createRequire(import.meta.url);
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
-const from = +(args.from ?? 0), to = +(args.to ?? 156.6), fps = +(args.fps ?? 4);
+const from = +(args.from ?? 0), to = +(args.to ?? 156.12), fps = +(args.fps ?? 4);
 let fail = 0; const bad = m => { fail++; console.log('✗ ' + m); }, ok = m => console.log('✓ ' + m);
 // 1
 const files = ['src', 'src/ch'].flatMap(d => readdirSync(d).filter(f => f.endsWith('.js')).map(f => d + '/' + f));

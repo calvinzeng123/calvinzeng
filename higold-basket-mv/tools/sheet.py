@@ -15,7 +15,7 @@ S = Image.new('RGB', (cols * (w + 4) + 4, rows * (h + 22) + 4), (30, 30, 30)); d
 try: font = ImageFont.truetype('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 14)
 except Exception: font = ImageFont.load_default()
 for i, t in enumerate(ts):
-    n = min(3757, round(t * FPS)); p = f'{D}/f{n:05d}.jpg'
+    n = min(3746, round(t * FPS)); p = f'{D}/f{n:05d}.jpg'
     x, y = 4 + (i % cols) * (w + 4), 4 + (i // cols) * (h + 22)
     if os.path.exists(p): S.paste(Image.open(p).resize((w, h), Image.LANCZOS), (x, y))
     dr.text((x + 2, y + h + 3), f'{n / FPS:.2f}s  #{n}', fill=(230, 230, 230), font=font)
