@@ -583,23 +583,24 @@ function sPull(t, lt) {
 // ---- 16.56 – 17.9 · LAN close-up: star eyes, blush, the machine detects a crush ----
 function sFace(t, lt) {
   paperBG();
-  const cx = 1150, cy = 500, z = 1 + .08 * E.io(clamp(lt / 1.5)), p = pulse(t, 5);
-  halftone(0, 0, W, H, (x, y) => clamp((Math.hypot(x - cx, (y - cy) * 1.25) - 560) / 900) * .9, { gap: 24, a: .2 });
-  speedLines(cx, cy, 520, 1500, 60, { a: .12, w: 8, seed: 9, rot: lt * .08 });
-  cam(cx, cy, z, 0);
-  const U = 108, bob = Math.sin(bp(t) * Math.PI);
-  const f = figure(cx, cy + 9.2 * U + 26 * (1 - Math.abs(bob)), U, { ...KP.frame, head: .1 * bob, lean: .025 * bob }, { who: 'lan', face: 'star', blush: 1.2 + .6 * p, seed: 610, w: .15, shadow: false });
-  camEnd();
+  const cx = 1170, cy = 470, z = 1 + .09 * E.io(clamp(lt / 1.5)), p = pulse(t, 5);
+  halftone(0, 0, W, H, (x, y) => clamp((Math.hypot(x - cx, (y - cy) * 1.2) - 480) / 800) * .95, { gap: 22, a: .32 });
+  speedLines(cx, cy, 500, 1500, 64, { a: .2, w: 8, seed: 9, rot: lt * .08 });
+  // zoom about the face (not the screen centre)
+  X.save(); X.translate(cx, cy); X.scale(z, z); X.translate(-cx, -cy);
+  const U = 128, bob = Math.sin(bp(t) * Math.PI);
+  const f = figure(cx, cy + 9.15 * U + 22 * (1 - Math.abs(bob)), U, { ...KP.frame, head: .1 * bob, lean: .02 * bob }, { who: 'lan', face: 'star', blush: 1.2 + .6 * p, seed: 610, w: .14, shadow: false });
+  X.restore();
   // the machine notices
-  const hx = (f.head[0] - cx) * z + cx, hy = (f.head[1] - cy) * z + cy, hr = f.head[2] * z * 1.5;
+  const hx = (f.head[0] - cx) * z + cx, hy = (f.head[1] - cy) * z + cy, hr = f.head[2] * z * 1.45;
   const bk = clamp((t - BT(25)) / .3);
-  bbox(hx - hr, hy - hr, hr * 2, hr * 2.05, '心动  1.00', { k: bk, size: 26, lw: 3.5 });
+  bbox(hx - hr, hy - hr * 1.05, hr * 2, hr * 2.1, '心动  1.00', { k: bk, size: 28, lw: 3.5 });
   for (let i = 0; i < 5; i++) {
     const a = t - BT(24) - i * .136, k = a > 0 ? Math.sin(clamp(a / .5) * Math.PI) : 0;
-    const ang = -2.7 + i * .6, r = 360 + (i % 2) * 70; sparkle(cx + Math.cos(ang) * r * 1.2, cy + Math.sin(ang) * r, 30 + (i % 3) * 12, { k, rot: a });
+    const ang = -2.75 + i * .62, r = 380 + (i % 2) * 70; sparkle(cx + Math.cos(ang) * r * 1.2, cy + Math.sin(ang) * r, 30 + (i % 3) * 12, { k, rot: a });
   }
-  text('LAN  小篮', 96, H - 104, { size: 34, font: F.smiley, col: PAL.ink });
-  text('FIRST PULL · 心动 DETECTED', 96, H - 66, { size: 18, font: F.mono, weight: 600, col: PAL.ink2, track: 3 });
+  text('LAN  小篮', 96, H - 104, { size: 36, font: F.smiley, col: PAL.ink });
+  text('FIRST PULL · 心动 DETECTED', 96, H - 64, { size: 19, font: F.mono, weight: 600, col: PAL.ink2, track: 3 });
 }
 
 // ---- 17.9 – 20.65 · slow-mo soft close, the first 嗒 ----
@@ -613,15 +614,15 @@ function sClose(t, lt) {
   paperBG();
   gridScroll(t);
   const ext = closeExt(t);
-  const C = productShot(ext, { sx: 1250, sy: 590, px: 960, yaw: lerp(-.98, -.9, E.io(clamp(lt / 2.7))), pitch: .26, style: 'steel', shine: lerp(300, -300, clamp(lt / 2.5)) });
+  const C = productShot(ext, { sx: 1320, sy: 590, px: 880, yaw: lerp(-.98, -.9, E.io(clamp(lt / 2.7))), pitch: .26, style: 'steel', shine: lerp(300, -300, clamp(lt / 2.5)) });
   const rail = pin(C, [-294, 142, 360]);
   const ck = clamp((t - 18.45) / .7);
-  callout(rail[0], rail[1], rail[0] - 110, 1000, 'SOFT-CLOSE · 阻尼缓冲', { k: ck, dir: 1, size: 28 });
-  // the 嗒 lands in clear space above the drawer front's top edge
-  const tr = pin(C, [316, 330, 460 + ext]);
-  daStamp(clamp(tr[0] - 60, 300, W - 190), clamp(tr[1] - 190, 170, H - 200), 220, t - T_DA, {});
+  callout(rail[0], rail[1], rail[0] - 90, 996, 'SOFT-CLOSE · 阻尼缓冲', { k: ck, dir: 1, size: 28 });
+  // the 嗒 lands on the drawer front itself — the sound of it closing
+  const fc = pin(C, [0, 190, 461 + ext]);
+  daStamp(fc[0] + 10, fc[1] + 10, 230, t - T_DA, {});
   text('SLOW-MO', W - 72, 96, { size: 20, font: F.mono, weight: 600, align: 'right', col: PAL.ink2, track: 3, a: .8 });
-  lyHero(5, t, { x: 116, y: 450, size: 150, align: 'left', lead: 1.18, exit: 'fade', hold: .25 });
+  lyHero(5, t, { x: 116, y: 450, size: 144, align: 'left', lead: 1.18, exit: 'fade', hold: .25 });
 }
 // the grid scrolls left, accelerating into the chorus
 function gridScroll(t) {
@@ -637,8 +638,8 @@ function buildShot(v) {
     const pos = gridScroll(t);
     const dir = v.dir, k = dir > 0 ? E.soft(lt / (v.d ?? .55)) : 1 - E.out5(lt / (v.d ?? .24));
     const ext = 420 * k;
-    productShot(ext, { sx: v.sx ?? 1250, sy: v.sy ?? 590, px: v.px, yaw: v.yaw + lt * (v.drift ?? .05), pitch: v.pitch, style: 'steel', shine: lerp(-400, 400, clamp(lt / .6)) });
-    if (dir < 0) daStamp(v.dx ?? 1600, v.dy ?? 260, v.ds ?? 170, lt - (v.d ?? .24) + .02, { rot: v.rot ?? -.1 });
+    const C = productShot(ext, { sx: v.sx ?? 1320, sy: v.sy ?? 590, px: v.px, yaw: v.yaw + lt * (v.drift ?? .05), pitch: v.pitch, style: 'steel', shine: lerp(-400, 400, clamp(lt / .6)) });
+    if (dir < 0) { const fc = pin(C, [0, 190, 461 + ext]); daStamp(fc[0], fc[1], v.ds ?? 180, lt - (v.d ?? .24) + .03, { rot: v.rot ?? -.1 }); }
     // speed streaks grow as the build accelerates (they travel left with the grid)
     const sp = clamp((t - 21.2) / 1.7);
     if (sp > 0) for (let i = 0; i < 14; i++) {
@@ -659,9 +660,9 @@ chapter('verse1', 0, 23.0, [
   [BT(18), sPull],
   [BT(24), sFace],
   [17.9, sClose],
-  [BT(30), buildShot({ dir: 1, d: .6, px: 860, yaw: -.5, pitch: .44 })],
-  [BT(32), buildShot({ dir: -1, d: .22, px: 1100, yaw: -1.05, pitch: .22, sx: 1180, dx: 1560, dy: 250 })],
-  [BT(32.5), buildShot({ dir: 1, d: .3, px: 760, yaw: -.25, pitch: .95, sy: 610 })],
-  [BT(33), buildShot({ dir: -1, d: .2, px: 1250, yaw: -.62, pitch: .4, sx: 1180, sy: 640, dx: 1500, dy: 230, ds: 200, rot: .08 })],
+  [BT(30), buildShot({ dir: 1, d: .6, px: 820, yaw: -.5, pitch: .44 })],
+  [BT(32), buildShot({ dir: -1, d: .2, px: 900, yaw: -1.0, pitch: .2, sx: 1330, ds: 200 })],
+  [BT(32.5), buildShot({ dir: 1, d: .28, px: 700, yaw: -.25, pitch: .95, sx: 1340, sy: 610 })],
+  [BT(33), buildShot({ dir: -1, d: .12, px: 1000, yaw: -.3, pitch: .3, sx: 1360, sy: 620, ds: 240, rot: .08 })],
 ]);
 })();

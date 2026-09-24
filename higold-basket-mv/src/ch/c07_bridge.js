@@ -57,6 +57,12 @@ function place(prims, o, ex, ey, ez, s) {
 }
 const shiftZ = (prims, dz) => dz ? prims.map(p => ({ ...p, pts: p.pts.map(q => [q[0], q[1], q[2] + dz]) })) : prims;
 
+// the wall/floor junction behind a cabinet, extended along x: a 3D-consistent ground line
+function groundLine(C, o = {}) {
+  const a = pin(C, [-(o.len ?? 2600), -20, -20]), b = pin(C, [o.len ?? 2600, -20, -20]);
+  handLine(a[0], a[1], b[0], b[1], { w: o.w ?? 2.2, col: o.col ?? PAL.steel1, seed: o.seed ?? 707 });
+}
+
 // ---------- shared: one cabinet cell (carcass + dish basket + front), local mm, front plane at z = UD ----------
 const UW = 620, UH = 330, UD = 460;
 const PLATE_S = PROF.plate.map(([r, y]) => [r * .78, y * .78]);
@@ -318,7 +324,7 @@ function shotGalaxy(t, lt) {
   galaxy(G, t);
   // the stream that joins the drawer to the galaxy while it unfurls
   if (gk > 0 && gk < 1) { X.beginPath(); X.moveTo(bIn[0], bIn[1]); X.quadraticCurveTo(bIn[0] - 60, lerp(bIn[1], G.y, .6), G.x, G.y); glowStroke(4, (1 - gk) * .9, PAL.shine, 6, .25); }
-  handLine(640, 968, 1880, 968, { w: 2.2, col: PAL.steel1, seed: 707 });
+  groundLine(C);
   const prims = cabinetPrims(ext, { handle: kp > 0 && kp < 1.4 ? PAL.orange : PAL.steel2 });
   render3(prims, C, { style: 'glow', dark: true });
   // light leaking round the closed drawer (the black-hole cabinet of verse 1, reversed)
@@ -423,7 +429,7 @@ function shotHome(t, lt) {
     const d = t - s.land; if (d >= 0 && d < .4) rings.push([C.project(s.at), d, j === HOME_SLOTS.length - 1]);
   });
   for (const [a, b] of trails) { X.beginPath(); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); glowStroke(3, .55); }
-  render3(prims, C, { style: 'glow', dark: true, lw: .85 + punch * .25 });
+  render3(prims, C, { style: 'glow', dark: true, lw: .62 + punch * .2 });
   for (const [q, d, last] of rings) {
     const e = E.out(d / .4);
     circle(q[0], q[1], 10 + 70 * e, { stroke: last ? PAL.orange : PAL.paper, w: 3 * (1 - e) + .5, a: 1 - e });
@@ -532,12 +538,11 @@ function shotSteady(t, lt) {
   galaxy({ x: 1440, y: 230, R: 330, spin: -(tt - T_GAL) * .3, ci: .5, pa: -.2, grow: 1, a: .5 }, t);
   const ext = 380 * E.soft(clamp((t - T_STEADY) / (T_STOP - T_STEADY)));
   const C = frameCam([0, 150, 250], -.66 + m * .1, .36 - m * .04, 1330, 590, 760, 560 + m * 70, { fov: 28 });
-  const fl = pin(C, [-330, -20, 460]);
-  handLine(780, fl[1], 1860, fl[1], { w: 2, col: PAL.steel0, seed: 909 });
-  // LAN, calm, hands on hips beside the drawer; she stops with everything else
-  const lp = lerpPose(move('idle', tt, 3), KP.hips, .85);
-  figure(fl[0] - 190, fl[1], 17, lp, { who: 'lan', col: PAL.paper, dark: true, face: t >= T_STOP ? 'closed' : 'smile', blush: 1, shadow: false });
+  groundLine(C, { col: PAL.steel0, seed: 909 });
   render3(cabinetPrims(ext, { handle: t >= T_STOP ? PAL.orange : PAL.steel2 }), C, { style: 'glow', dark: true });
+  // LAN, calm, hands on hips beside the drawer (figurine scale); she stops with everything else
+  const lf = C.project([-600, -20, 330]), lp = lerpPose(move('idle', tt, 3), KP.hips, .85);
+  figure(lf[0], lf[1], lf[3] * 36, lp, { who: 'lan', col: PAL.paper, dark: true, face: t >= T_STOP ? 'closed' : 'smile', blush: 1, shadow: false });
   // the damping trace: the soft-close curve drawing itself, flat at the downbeat
   const gx = 110, gy = 870, gw = 520, gh = 90, pk = clamp((t - T_STEADY) / (T_STOP - T_STEADY));
   X.save(); X.globalAlpha *= clamp(lt / .4);

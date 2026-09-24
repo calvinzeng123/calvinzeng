@@ -36,7 +36,7 @@ function drawWorld(t, main) {
   const g = BUF.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   const prev = X; X = g; const dIn = paintShot(inc, t); X = prev;
   const dOut = paintShot(out, t);
-  // slide geometry: the incoming frame travels in with the drawer curve; the outgoing frame is pushed a little (parallax)
+  // slide geometry: the incoming frame travels in with the drawer curve; the outgoing frame darkens as it is covered
   const hz = P.dir !== 2, sgn = P.dir === -1 ? -1 : 1, off = (1 - k) * (hz ? W : H);
   X.save(); X.setTransform(1, 0, 0, 1, 0, 0);
   // darken the outgoing frame slightly as it is covered

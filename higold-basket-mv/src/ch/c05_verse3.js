@@ -320,7 +320,7 @@ const PROUD = pose({ sL: 2.5, eL: .35, sR: .9, eR: -1.9, hL: .12, hR: .12, head:
 function shotTiptoe(t, lt, dur) {
   paperBG();
   const th = LD.TH * E.soft(seg(t, 86.02, 87.35)), push = seg(t, 84.8, 88.8);
-  const C = frameCam([220, 1060, 420], .1 - push * .04, .03, 1190, 520, 2300 - push * 120, 1000, { fov: 30 });
+  const C = frameCam([220, 1080, 420], .1 - push * .04, .03, 1190, 548, 2480 - push * 120, 1000, { fov: 30 });
   const ro = { style: 'steel', shine: lerp(-600, 800, seg(t, 86, 87.6)) };
   wline(C, [-1500, 0, 0], [2400, 0, 0], { w: 1.5, col: PAL.ink2, a: .55 });
   wline(C, [-1500, 1100, 0], [2400, 1100, 0], { w: 2, col: PAL.ink2, a: .4, dash: [16, 12] });
@@ -392,16 +392,15 @@ function spotlight(t, a = 1) {
 }
 function statue(t, o = {}) {
   // plaster figure on its knees, bottom up, head and arms swallowed by a small cabinet (the old habit, frozen)
-  const gy = MU.py - 8, cw = 150, ch = 190, bx = 1256, bt = gy - ch;
+  const gy = MU.py - 8, cw = 156, ch = 168, bx = 1250, bt = gy - ch;
   fillPoly([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4], [1080, gy - 4]], PAL.paper2);
   inkStroke([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4]], { w: 1.8, col: PAL.ink2, seed: 88, taper: [.01, .01] });
   const st = (pts, sd, w = 6.5) => inkStroke(pts, { w, seed: 700 + sd, taper: [.08, .12], wob: .4, press: .15 });
-  // far leg, near leg: shins flat on the plinth, thighs up to a round, proud bottom; the back runs into the cabinet
-  st([[bx - 178, gy - 16], [bx - 172, gy - 4], [bx - 106, gy - 4], [bx - 92, gy - 62]], 1, 6);
-  st([[bx - 196, gy - 18], [bx - 190, gy - 5], [bx - 122, gy - 5], [bx - 104, gy - 60]], 2, 7);
-  st([[bx - 104, gy - 60], [bx - 132, gy - 72], [bx - 132, gy - 104], [bx - 104, gy - 120], [bx - 50, gy - 118], [bx + 24, gy - 106]], 3, 8);
-  // one arm braced on the plinth
-  st([[bx - 22, gy - 110], [bx - 28, gy - 56], [bx - 18, gy - 6], [bx - 2, gy - 6]], 4, 6);
+  // far leg, near leg: shins flat on the plinth with curled toes, thighs up to a round, proud bottom (the highest point);
+  // the back slopes down into the cabinet
+  st([[bx - 152, gy - 15], [bx - 146, gy - 4], [bx - 84, gy - 4], [bx - 80, gy - 70]], 1, 6);
+  st([[bx - 170, gy - 17], [bx - 163, gy - 5], [bx - 100, gy - 5], [bx - 96, gy - 72]], 2, 7);
+  st([[bx - 96, gy - 72], [bx - 120, gy - 94], [bx - 114, gy - 128], [bx - 84, gy - 138], [bx - 52, gy - 120], [bx - 16, gy - 86], [bx + 24, gy - 64]], 3, 8);
   // the cabinet: dark interior swallowing head and arms, carcass edges, the door swung open
   X.save(); X.beginPath(); X.rect(bx, bt, cw, ch); X.rect(bx + 14, bt + 14, cw - 28, ch - 28); X.fillStyle = PAL.paper; X.fill('evenodd'); X.restore();
   rect(bx + 14, bt + 14, cw - 28, ch - 28, PAL.ink);

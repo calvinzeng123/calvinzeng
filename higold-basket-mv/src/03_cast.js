@@ -26,7 +26,7 @@ const KP = {
   point: pose({ lean: -.05, sR: 2.5, eR: 0, sL: .3, eL: .4, hL: .1, hR: .22, head: .1 }),         // point up-right
   pointDown: pose({ lean: .1, sR: .85, eR: 0, sL: .4, eL: .5, hL: .25, kL: .3, hR: .1, head: .15 }),
   armsUp: pose({ dy: .2, sL: 2.45, eL: .12, sR: 2.45, eR: .12, hL: .1, hR: .1 }),   // wide V so the arms clear the head
-  heart: pose({ sL: 2.55, eL: 1.5, sR: 2.55, eR: 1.5, hL: .12, hR: .12, head: .05 }),              // arms curve over the head
+  heart: pose({ sL: 2.2, eL: 1.0, sR: 2.2, eR: 1.0, hL: .12, hR: .12, head: .05 }),               // big arm-heart: arms round over the head, hands clear of it
   cross: pose({ sL: .35, eL: 2.35, sR: .35, eR: 2.35, hL: .08, hR: .08 }),                       // arms crossed "X"
   squat: pose({ dy: -.9, sL: .8, eL: .9, sR: .8, eR: .9, hL: .55, kL: 1.1, hR: .55, kR: 1.1, squash: .04 }),
   jump: pose({ dy: 1.6, sL: 2.4, eL: .2, sR: 2.4, eR: .2, hL: .4, kL: 1.3, hR: .4, kR: 1.3 }),

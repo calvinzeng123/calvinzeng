@@ -160,7 +160,7 @@ const PROF = {
 function lathe(at, prof, o = {}) { return { k: 'lathe', at, prof, axisV: o.axis === 'z' ? [0, 0, 1] : o.axis === 'x' ? [1, 0, 0] : [0, 1, 0], fill: o.fill ?? PAL.paper, ink: o.ink ?? PAL.ink, open: o.open ?? false, band: o.band, iw: o.iw }; }
 
 // ---------- rendering ----------
-// render3(prims, cam, {style: 'steel'|'ink'|'glow', lw: global line weight, shine: world x of a moving highlight, a, dark})
+// render3(prims, cam, {style: 'steel'|'ink'|'glow', lw: global line weight, wlw: extra weight for wires only, shine: world x of a moving highlight, a, dark})
 function render3(prims, C, o = {}) {
   const style = o.style ?? 'steel', lwk = o.lw ?? 1, items = [];
   for (const p of prims) {
@@ -198,7 +198,7 @@ function drawFace(pr, p, o) {
   if (p.ink) { X.strokeStyle = o.dark ? PAL.steel2 : p.ink; X.lineWidth = (p.iw ?? 2) * (o.lw ?? 1); X.stroke(); }
 }
 function drawWire(pr, p, style, lwk, o) {
-  const s = pr.reduce((a, q) => a + q[3], 0) / pr.length, w = Math.max(.7, p.r * 2 * s * lwk);
+  const s = pr.reduce((a, q) => a + q[3], 0) / pr.length, w = Math.max(.7, p.r * 2 * s * lwk * (o.wlw ?? 1));   // o.wlw: wire-only weight
   const path = () => { X.beginPath(); X.moveTo(pr[0][0] + jit(pr[0][0] * .01, .25), pr[0][1] + jit(pr[0][1] * .01, .25)); for (let i = 1; i < pr.length; i++) X.lineTo(pr[i][0], pr[i][1]); };
   if (style === 'ink') { path(); X.strokeStyle = o.inkCol ?? PAL.ink; X.lineWidth = Math.max(.9, w * .75); X.stroke(); return; }
   if (style === 'glow') { path(); X.strokeStyle = rgba(PAL.steel2, .35); X.lineWidth = w * 3.2; X.stroke(); path(); X.strokeStyle = PAL.shine; X.lineWidth = Math.max(.8, w * .6); X.stroke(); return; }

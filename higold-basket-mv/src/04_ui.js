@@ -12,7 +12,7 @@ function win(x, y, w, h, title, o = {}) {
   rect(x, y, w, Math.min(bar, hh), dark ? PAL.steel0 : PAL.ink);
   X.strokeStyle = dark ? PAL.steel2 : PAL.ink; X.lineWidth = 3; X.strokeRect(x, y, w, hh);
   if (hh > 20) {
-    for (let i = 0; i < 3; i++) rect(x + 14 + i * 22, y + 13, 14, 14, i === 0 ? PAL.orange : PAL.paper);
+    for (let i = 0; i < 3; i++) rect(x + 14 + i * 22, y + 13, 14, 14, i === 0 ? (o.btn ?? PAL.orange) : PAL.paper);   // o.btn: close-button colour
     text(title, x + 88, y + 27, { size: 19, font: F.mono, weight: 600, col: PAL.paper, track: 1 });
   }
   if (o.body && hh > bar + 8) { X.save(); X.beginPath(); X.rect(x, y + bar, w, hh - bar); X.clip(); o.body(x, y + bar, w, hh - bar); X.restore(); }
