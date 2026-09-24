@@ -1,1 +1,647 @@
-// c01_verse1 — not painted yet
+// c01_verse1.js — Verse 1 · "The black-hole cabinet" (0 – 23.0 s). Paper, a bent grid, then the first orange.
+// Story: a closed base cabinet leaks darkness → the door flies open on a black hole that bends the paper grid and keeps a ring of
+// kitchenware in orbit → pots spiral in and go 404 → LAN kneels head-first into the dark → the spice bottles domino and search
+// finds no salt → the first pull: the grid snaps straight, the steel basket glides out → LAN's star eyes → the soft-close 嗒 →
+// accelerating cuts into the chorus.
+(() => {
+'use strict';
+const BT = beatT;
+
+// =========================================================== helpers ===========================================================
+// plain ink polyline with per-vertex boil (clean technical line for the cabinet + product world)
+function pline(pts, w = 3, col = PAL.ink, close = false, a = 1, seed = 0, wob = .45) {
+  if (pts.length < 2) return;
+  X.save(); X.globalAlpha *= a; X.strokeStyle = col; X.lineWidth = w; X.lineJoin = 'round'; X.lineCap = 'round'; X.beginPath();
+  pts.forEach((p, i) => { const x = p[0] + jit(seed + i * 1.73, wob), y = p[1] + jit(seed + i * 2.31 + 50, wob); i ? X.lineTo(x, y) : X.moveTo(x, y); });
+  if (close) X.closePath(); X.stroke(); X.restore();
+}
+const P2 = (C, p) => { const q = C.project(p); return [q[0], q[1]]; };
+const ell = (cx, cy, rx, ry, rot, a0, a1, n = 40) => ellipsePts(cx, cy, rx, ry, n, rot, a0, a1);
+
+// ---- the gravitational lens applied to the paper grid ----
+// L = {x, y, e (radius px), sw (swirl rad), k (blend 0..1, may overshoot for a wobble), R (hide inside the disc), mode 'pinch'|'ring'}
+// 'pinch' drags lines INTO the hole (r' = √(r² − e²)); 'ring' bows them around it (outer Einstein image).
+function lensPt(px, py, L) {
+  const dx = px - L.x, dy = py - L.y, r = Math.hypot(dx, dy) || 1e-3;
+  let rr = L.mode === 'ring' ? (r + Math.sqrt(r * r + 4 * L.e * L.e)) / 2 : Math.sqrt(Math.max(0, r * r - L.e * L.e));
+  rr = r + (rr - r) * L.k;
+  const q = Math.min(1.6, L.e / Math.max(rr, 1));
+  const a = Math.atan2(dy, dx) + (L.sw || 0) * L.k * Math.pow(q, L.swp ?? 2);
+  return [L.x + Math.cos(a) * rr, L.y + Math.sin(a) * rr, rr];
+}
+function warpGrid(o = {}) {
+  const g = o.gap ?? 60, L = o.L && o.L.e * Math.abs(o.L.k) > .5 ? o.L : null, step = o.step ?? 12, col = o.col ?? PAL.ink, a0 = o.a ?? .1, m = o.margin ?? 420;
+  const ox = o.ox ?? 0, oy = o.oy ?? 0, hide = L ? (L.R ?? 0) : 0, NB = 4;
+  const paths = Array.from({ length: NB * 2 }, () => new Path2D());
+  const add = (x1, y1, x2, y2, maj) => {
+    const n = Math.ceil(Math.hypot(x2 - x1, y2 - y1) / step); let prev = null, pb = -1;
+    for (let i = 0; i <= n; i++) {
+      const u = i / n, px = lerp(x1, x2, u), py = lerp(y1, y2, u), q = L ? lensPt(px, py, L) : [px, py, 1e9];
+      if (prev && q[2] > hide && prev[2] > hide && Math.abs(q[0] - prev[0]) + Math.abs(q[1] - prev[1]) < step * 6) {
+        const b = L ? Math.min(NB - 1, Math.floor(clamp(1.7 * L.e * Math.abs(L.k) / Math.max(1, (q[2] + prev[2]) / 2)) * NB)) : 0;
+        const P = paths[b + (maj ? NB : 0)]; if (b !== pb) P.moveTo(prev[0], prev[1]); P.lineTo(q[0], q[1]); pb = b;
+      } else pb = -1;
+      prev = q;
+    }
+  };
+  const vx0 = ((ox % g) + g) % g, vy0 = ((oy % g) + g) % g;
+  for (let x = vx0 - Math.ceil(m / g) * g; x <= W + m; x += g) add(x, -m, x, H + m, Math.round((x - ox) / g) % 4 === 0);
+  for (let y = vy0 - Math.ceil(m / g) * g; y <= H + m; y += g) add(-m, y, W + m, y, Math.round((y - oy) / g) % 4 === 0);
+  X.save(); X.strokeStyle = col; X.lineCap = 'round'; X.lineJoin = 'round';
+  for (let b = 0; b < NB * 2; b++) {
+    const bb = b % NB, maj = b >= NB;
+    X.globalAlpha = clamp(a0 * (1 + bb * 1.25) * (maj ? 1.7 : 1)) * (o.fade ?? 1); X.lineWidth = (maj ? 1.5 : 1.1) + bb * .45; X.stroke(paths[b]);
+  }
+  X.restore();
+}
+
+// ---- tiny box renderer with back-face culling (faces wound CCW seen from outside) ----
+const BOXF = [[0, 4, 6, 2], [1, 3, 7, 5], [0, 1, 5, 4], [2, 6, 7, 3], [0, 2, 3, 1], [4, 5, 7, 6]];   // -x +x -y +y -z +z
+function boxC(x0, y0, z0, x1, y1, z1, fn) { const c = []; for (let i = 0; i < 8; i++) { const p = [i & 1 ? x1 : x0, i & 2 ? y1 : y0, i & 4 ? z1 : z0]; c.push(fn ? fn(p) : p); } return c; }
+function drawBox(C, corners, o = {}) {
+  const pr = corners.map(p => C.project(p)), vis = [];
+  BOXF.forEach((f, fi) => {
+    if (o.skip && o.skip.includes(fi)) return;
+    const pts = f.map(i => [pr[i][0], pr[i][1]]); let s = 0;
+    for (let i = 0; i < 4; i++) { const a = pts[i], b = pts[(i + 1) % 4]; s += a[0] * b[1] - b[0] * a[1]; }
+    if (s < 0) vis.push([fi, pts]);
+  });
+  for (const [fi, pts] of vis) { fillPoly(pts, o.fills?.[fi] ?? o.fill ?? PAL.paper); pline(pts, o.w ?? 2.6, PAL.ink, true, 1, (o.seed ?? 0) + fi * 9); }
+  return Object.fromEntries(vis);
+}
+
+// ---- the base cabinet (mm; floor y = 0, carcass front plane z = 0) ----
+// door: opening angle (rad), hinge: 1 = right edge, -1 = left edge. Returns screen polygons.
+function cabGeom(C, o = {}) {
+  const hg = o.hinge ?? 1, th = o.door ?? 0;
+  const doorFn = p => { const hx = hg * 297, r = rotY([p[0] - hx, p[1], p[2]], th * hg); return [r[0] + hx, r[1], r[2]]; };
+  return {
+    open: [[-282, 108, 0], [282, 108, 0], [282, 782, 0], [-282, 782, 0]].map(p => P2(C, p)),
+    outer: [[-300, 90, 0], [300, 90, 0], [300, 800, 0], [-300, 800, 0]].map(p => P2(C, p)),
+    doorFn, door: boxC(-297, 94, 0, 297, 796, 20, doorFn),
+    front: [[-297, 94, 20], [297, 94, 20], [297, 796, 20], [-297, 796, 20]].map(p => P2(C, doorFn(p))),
+  };
+}
+function cabBody(C, G) {
+  drawBox(C, boxC(-282, 0, -520, 282, 90, -50), { fill: PAL.paper2, seed: 3 });                               // recessed plinth
+  drawBox(C, boxC(-300, 90, -560, 300, 800, 0), { skip: [5], fill: PAL.paper, fills: { 0: PAL.paper2, 1: PAL.paper2 }, seed: 5 });
+  // front frame with the opening cut out
+  X.save(); X.beginPath(); poly(G.outer); const o = G.open; X.moveTo(o[0][0], o[0][1]); for (let i = 3; i >= 0; i--) X.lineTo(o[i][0], o[i][1]); X.closePath();
+  X.fillStyle = PAL.paper; X.fill('evenodd'); X.restore();
+  pline(G.outer, 2.8, PAL.ink, true, 1, 7); pline(G.open, 2, PAL.ink, true, 1, 8);
+  drawBox(C, boxC(-330, 800, -600, 330, 840, 30), { fill: PAL.paper, fills: { 3: PAL.paper2 }, w: 3, seed: 11 });   // counter slab
+}
+function cabDoor(C, G, o = {}) {
+  const f = drawBox(C, G.door, { fill: PAL.paper, fills: { 4: PAL.paper2, 0: PAL.paper2, 1: PAL.paper2 }, w: 3, seed: 21 });
+  if (f[5]) {   // front face visible: inset panel line + a slim bar handle near the free edge
+    const hg = o.hinge ?? 1, q = (x, y) => P2(C, G.doorFn([x, y, 21]));
+    pline([q(-250, 150), q(250, 150), q(250, 740), q(-250, 740)], 1.4, PAL.ink, true, .55, 23);
+    const hx = -hg * 262, bar = [q(hx - 8, 540), q(hx + 8, 540), q(hx + 8, 740), q(hx - 8, 740)];
+    fillPoly(bar, PAL.ink2); pline(bar, 2, PAL.ink, true, 1, 24);
+  }
+}
+// interior perspective edges of the carcass, lensed around the hole, clipped to the opening
+function cabInterior(C, G, L, a = 1) {
+  const E3 = [[[-282, 108, 0], [-282, 108, -540]], [[282, 108, 0], [282, 108, -540]], [[-282, 782, 0], [-282, 782, -540]], [[282, 782, 0], [282, 782, -540]],
+    [[-282, 108, -540], [282, 108, -540]], [[282, 108, -540], [282, 782, -540]], [[282, 782, -540], [-282, 782, -540]], [[-282, 782, -540], [-282, 108, -540]],
+    [[-282, 440, 0], [-282, 440, -540]], [[282, 440, 0], [282, 440, -540]], [[-282, 440, -540], [282, 440, -540]], [[-282, 440, -20], [282, 440, -20]]];
+  X.save(); poly(G.open); X.clip();
+  for (const [p, q] of E3) {
+    const pts = []; for (let i = 0; i <= 24; i++) { const s = P2(C, vlerp(p, q, i / 24)); const m = L ? lensPt(s[0], s[1], L) : [...s, 1e9]; if (!L || m[2] > (L.R ?? 0)) pts.push(m); }
+    pline(pts, 1.8, PAL.ink, false, .55 * a, p[0] + q[2]);
+  }
+  X.restore();
+}
+
+// ---- darkness leaking round a closed door: a printed halftone "dark glow" that breathes, plus the inked gap ----
+// quad = [TL, TR, BR, BL] on screen. Side weights stretch the glow (the free edge leaks most).
+function darkGlow(quad, t, k, o = {}) {
+  if (k < .01) return;
+  const xs = quad.map(p => p[0]), ys = quad.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const sp = (o.spread ?? 120) * k, wl = o.left ?? 1.3, wr = o.right ?? .55, wt = o.top ?? .8, wb = o.bot ?? .9;
+  halftone(x0 - sp * wl - 24, y0 - sp * wt - 24, x1 - x0 + sp * (wl + wr) + 48, y1 - y0 + sp * (wt + wb) + 48, (x, y) => {
+    const dx = x < x0 ? (x0 - x) / wl : x > x1 ? (x - x1) / wr : 0, dy = y < y0 ? (y0 - y) / wt : y > y1 ? (y - y1) / wb : 0;
+    const d = Math.hypot(dx, dy); if (d === 0) return 0;
+    const f = 1 - d / sp; if (f <= 0) return 0;
+    return f * f * (1.05 + .45 * noise2(x / 64 + t * .9, y / 64 - t * .6));
+  }, { gap: o.gap ?? 12, col: PAL.ink, angle: .26 });
+}
+function gapLine(quad, k) { pline([...quad, quad[0]], 3 + 4 * k, PAL.ink, false, 1, 91, .3); }
+
+// ---- kitchenware icons (unit ≈ 1 = half-width), paper fill + ink line ----
+function ware(kind, x, y, s, rot, o = {}) {
+  if (s < 1) return;
+  const sd = o.seed ?? 0;
+  X.save(); X.globalAlpha *= o.a ?? 1; X.translate(x + jit(sd + 1, .5), y + jit(sd + 2, .5));
+  if (o.stretch && o.stretch !== 1) { X.rotate(o.sdir); X.scale(o.stretch, 1 / o.stretch); X.rotate(-o.sdir); }
+  X.rotate(rot); X.scale(s, s);
+  const lw = (o.w ?? 3.2) / s, ink = o.col ?? PAL.ink;
+  X.lineWidth = lw; X.lineJoin = 'round'; X.lineCap = 'round'; X.strokeStyle = ink; X.fillStyle = o.fill ?? PAL.paper;
+  const B = () => X.beginPath(), FS = () => { X.fill(); X.stroke(); }, S = () => X.stroke();
+  const bar = (x0, y0, len, w, a) => { X.save(); X.translate(x0, y0); X.rotate(a); B(); X.roundRect(0, -w / 2, len, w, w / 2); X.fillStyle = ink; X.fill(); X.restore(); };
+  switch (kind) {
+    case 'lid':
+      B(); X.moveTo(-1, .12); X.bezierCurveTo(-.92, -.52, .92, -.52, 1, .12); X.closePath(); FS();
+      B(); X.ellipse(0, .12, 1, .2, 0, 0, TAU); FS();
+      B(); X.roundRect(-.18, -.56, .36, .2, .08); FS();
+      break;
+    case 'pot':   // 锅: wok with a long handle
+      bar(.92, -.14, 1.05, .17, -.3);
+      B(); X.moveTo(-1, -.14); X.bezierCurveTo(-.9, .66, .9, .66, 1, -.14); X.closePath(); FS();
+      B(); X.ellipse(0, -.14, 1, .22, 0, 0, TAU); FS();
+      break;
+    case 'bowl':  // 碗
+      B(); X.roundRect(-.3, .36, .6, .16, .05); FS();
+      B(); X.moveTo(-.95, -.22); X.bezierCurveTo(-.85, .62, .85, .62, .95, -.22); X.closePath(); FS();
+      B(); X.ellipse(0, -.22, .95, .19, 0, 0, TAU); FS();
+      B(); X.moveTo(-.8, .08); X.quadraticCurveTo(0, .22, .8, .08); S();
+      break;
+    case 'ladle': // 瓢
+      bar(.4, -.2, 1.5, .15, -.55);
+      B(); X.ellipse(0, 0, .62, .5, 0, 0, TAU); FS();
+      B(); X.ellipse(0, -.14, .48, .2, 0, 0, TAU); S();
+      break;
+    case 'basin': // 盆
+      B(); X.moveTo(-1.15, -.3); X.lineTo(-.8, .42); X.quadraticCurveTo(0, .58, .8, .42); X.lineTo(1.15, -.3); X.closePath(); FS();
+      B(); X.ellipse(0, -.3, 1.15, .24, 0, 0, TAU); FS();
+      B(); X.ellipse(0, -.3, .96, .16, 0, 0, TAU); S();
+      break;
+    case 'spoon':
+      bar(-.3, 0, 1.6, .13, .06);
+      B(); X.ellipse(-.6, 0, .42, .27, 0, 0, TAU); FS();
+      break;
+    case 'plate':
+      B(); X.ellipse(0, 0, 1.05, .34, 0, 0, TAU); FS();
+      B(); X.ellipse(0, -.02, .62, .19, 0, 0, TAU); S();
+      break;
+    case 'cup':
+      B(); X.ellipse(.52, .02, .26, .28, 0, 0, TAU); S();
+      B(); X.moveTo(-.5, -.45); X.lineTo(-.42, .45); X.quadraticCurveTo(0, .56, .42, .45); X.lineTo(.5, -.45); X.closePath(); FS();
+      B(); X.ellipse(0, -.45, .5, .13, 0, 0, TAU); FS();
+      break;
+    case 'chop':
+      bar(-1.2, -.1, 2.4, .1, -.08); bar(-1.2, .14, 2.4, .1, -.04);
+      break;
+    case 'spat':  // 铲
+      bar(-1.4, 0, 1.5, .14, 0);
+      B(); X.moveTo(.08, -.36); X.lineTo(1.05, -.44); X.lineTo(1.1, .44); X.lineTo(.08, .36); X.closePath(); FS();
+      B(); X.moveTo(.45, -.2); X.lineTo(.85, -.22); X.moveTo(.45, .2); X.lineTo(.85, .22); S();
+      break;
+  }
+  X.restore();
+}
+
+// ---- the black hole: disc, lensed halo arcs, the accretion ring of kitchenware ----
+const RING = [   // kind, orbit radius (× R), phase, size px
+  ['lid', 1.72, .2, 44], ['bowl', 2.02, 1.35, 38], ['spoon', 1.5, 2.3, 30], ['plate', 2.42, 3.05, 44], ['pot', 2.2, 4.15, 44],
+  ['cup', 1.86, 5.0, 28], ['ladle', 2.68, 5.75, 40], ['chop', 2.1, .75, 34], ['basin', 2.86, 2.55, 42], ['spat', 1.62, 3.7, 32],
+  ['lid', 2.98, 4.8, 36], ['bowl', 2.55, .05, 32],
+];
+function ringPos(cx, cy, R, rf, ph, o) { const [x, y] = rot2(Math.cos(ph) * rf * R, Math.sin(ph) * rf * R * (o.flat ?? .24), o.tilt ?? -.16); return [cx + x, cy + y]; }
+// front = true draws the near half (in front of the disc), false the far half.
+function ringLayer(t, cx, cy, R, o, front) {
+  const sp = o.spin ?? 1, k = o.k ?? 1; if (k < .01) return;
+  const om = rf => sp * 2.1 * Math.pow(rf, -1.5), isF = ph => Math.sin(ph) > 0;
+  X.save(); X.globalAlpha *= k;
+  // streak arcs (the disk's flow), tapered like comets
+  [1.34, 1.58, 1.9, 2.25, 2.62, 3.05].forEach((rf, ri) => {
+    for (let sgi = 0; sgi < 3; sgi++) {
+      const len = .7 + hash(ri * 7 + sgi) * 1.4, p0 = hash(ri * 13 + sgi * 3) * TAU + om(rf) * t * 1.15 + sgi * TAU / 3;
+      let run = [];
+      const flush = () => { if (run.length > 2) inkStroke(run, { w: 3.4 - ri * .3, taper: [.85, .04], wob: .4, seed: ri * 5 + sgi, a: .85 }); run = []; };
+      for (let i = 0; i <= 26; i++) { const ph = p0 + len * i / 26; if (isF(ph) === front) run.push(ringPos(cx, cy, R, rf, ph, o)); else flush(); }
+      flush();
+    }
+  });
+  // faint orbit guides
+  for (const rf of [1.46, 2.34, 3.1]) { const pts = []; for (let i = 0; i <= 60; i++) { const ph = front ? Math.PI * i / 60 : Math.PI + Math.PI * i / 60; pts.push(ringPos(cx, cy, R, rf, ph, o)); } pline(pts, 1.3, PAL.ink, false, .32, rf * 10); }
+  // dust
+  X.fillStyle = PAL.ink; X.beginPath();
+  for (let i = 0; i < 70; i++) {
+    const rf = 1.25 + hash(i * 3.1) * 2.1, ph = hash(i * 5.7) * TAU + om(rf) * t * 1.3; if (isF(ph) !== front) continue;
+    const [x, y] = ringPos(cx, cy, R, rf, ph, o), r = 1.3 + hash(i * 9.1) * 2.4; X.moveTo(x + r, y); X.arc(x, y, r, 0, TAU);
+  }
+  X.fill();
+  // kitchenware
+  const items = RING.map(([kind, rf, ph0, sz], i) => { const ph = ph0 + om(rf) * t; return { kind, rf, ph, sz, i, d: Math.sin(ph) }; })
+    .filter(it => isF(it.ph) === front).sort((a, b) => a.d - b.d);
+  for (const it of items) {
+    const [x, y] = ringPos(cx, cy, R, it.rf, it.ph, o), sc = (1 + .24 * it.d) * (R / 165) * 1.3;
+    const trail = []; for (let j = 0; j <= 10; j++) trail.push(ringPos(cx, cy, R, it.rf, it.ph - (.05 + .42 * j / 10) / it.rf, o));
+    inkStroke(trail.reverse(), { w: 5 * sc, taper: [.95, .05], wob: .3, seed: it.i * 3, a: .5 });
+    ware(it.kind, x, y, it.sz * sc, t * (.5 + hash(it.i) * .9) * (it.i % 2 ? 1 : -1) + it.i, { seed: it.i * 11, w: 3 });
+  }
+  X.restore();
+}
+function blackDisc(cx, cy, R, o = {}) {
+  circle(cx, cy, R, { fill: PAL.ink });
+  handCircle(cx, cy, R + 2.5, { w: 3.5, seed: 77 });
+  // lensed far side of the disk: arcs hugging the top (Gargantua-style), thinner ones under
+  const tilt = o.tilt ?? -.16, k = o.k ?? 1; if (k < .01) return;
+  for (let i = 0; i < 3; i++) {
+    const rr = R * (1.07 + i * .075), a0 = Math.PI + .1 + i * .08, a1 = TAU - .1 - i * .08;
+    inkStroke(ell(cx, cy, rr, rr * .93, tilt, a0, a1, 50), { w: (3.4 - i * .9) * k, taper: [.2, .2], wob: .3, seed: 60 + i });
+  }
+  for (let i = 0; i < 2; i++) { const rr = R * (1.05 + i * .05); inkStroke(ell(cx, cy, rr, rr * .7, tilt, .45 + i * .15, Math.PI - .45 - i * .15, 36), { w: (2 - i * .6) * k, taper: [.3, .3], wob: .3, seed: 70 + i }); }
+}
+
+// ---- LAN kneeling in profile, facing screen-right, head-first into something; legs kick on 8ths ----
+function kneelLan(Kx, Ky, U, t) {
+  const lw = .2 * U, st = (pts, sd, w = lw, tp = [.1, .15]) => inkStroke(pts, { w, taper: tp, wob: .5, seed: 300 + sd, press: .2 });
+  const jig = Math.sin(t * 17), H = [Kx - .3 * U + jig * .1 * U, Ky - 2.15 * U - Math.abs(jig) * .12 * U];
+  const ta = -.2 + Math.sin(t * 23) * .05, N = [H[0] + Math.cos(ta) * 3.3 * U, H[1] + Math.sin(ta) * 3.3 * U];
+  for (const sd of [1, 0]) {   // far leg first
+    const k = Math.max(0, Math.sin((bp(t) * 2 + sd) * Math.PI)), a = Math.PI + .08 + k * 1.15, kx = Kx + sd * .38 * U;
+    const Fx = kx + Math.cos(a) * 2.1 * U, Fy = Ky + Math.sin(a) * 2.1 * U;
+    st([[H[0] + sd * .2 * U, H[1] + .2 * U], [kx, Ky]], 1 + sd, lw, [.02, .05]);
+    st([[kx, Ky], [Fx, Fy], [Fx + Math.cos(a - 1.45) * .55 * U, Fy + Math.sin(a - 1.45) * .55 * U]], 3 + sd, lw, [.02, .25]);
+    if (k > .92) for (let j = 0; j < 3; j++) { const aa = a - .9 + j * .45; line(Fx + Math.cos(aa) * .7 * U, Fy + Math.sin(aa) * .7 * U, Fx + Math.cos(aa) * 1.05 * U, Fy + Math.sin(aa) * 1.05 * U, 3, PAL.ink, .8); }
+  }
+  // shorts / bottom
+  X.save(); X.fillStyle = PAL.paper; X.beginPath(); X.ellipse(H[0] - .08 * U, H[1] - .05 * U, .72 * U, .62 * U, -.25, 0, TAU); X.fill(); X.restore();
+  st(ell(H[0] - .08 * U, H[1] - .05 * U, .72 * U, .62 * U, -.25, -2.2, 1.9, 30), 6, lw * 1.05, [.05, .1]);
+  st([H, [lerp(H[0], N[0], .5), lerp(H[1], N[1], .5) - .15 * U], N], 7, lw * 1.05, [.02, .02]);
+  return { H, N };
+}
+
+// ---- a gripping hand (arm enters along +x in local space), for the first pull ----
+function hand(x, y, s, ang, o = {}) {
+  X.save(); X.translate(x, y); X.rotate(ang); X.scale(s / 100, s / 100); X.globalAlpha *= o.a ?? 1;
+  const w = 3.2 * 100 / s, ln = (pts, sd, c = false, ww = w) => pline(pts, ww, PAL.ink, c, 1, sd, .5), fl = pts => fillPoly(pts, PAL.paper);
+  const sleeve = [[92, -58], [760, -76], [760, 76], [92, 60]]; fl(sleeve); ln(sleeve, 1, true);
+  ln([[122, -58], [126, 60]], 2);
+  const wrist = [[30, -40], [100, -44], [100, 46], [34, 44]]; fl(wrist); ln([[30, -40], [100, -44]], 3); ln([[34, 44], [100, 46]], 4);
+  const g = o.grip ?? 1;
+  // fist: knuckles over the top, fingers wrapping the bar in front (to the left)
+  const fist = [[40, -40], [0, -52], [-40, -48], [-62, -26], [-66, 6 + 10 * (1 - g)], [-50, 36], [-8, 46], [40, 44]];
+  X.save(); X.fillStyle = PAL.paper; smoothPath(fist, true); X.fill(); X.lineWidth = w; X.strokeStyle = PAL.ink; X.stroke(); X.restore();
+  for (let i = 0; i < 3; i++) ln([[-64 + i * 2, -14 + i * 16], [-34 + i * 4, -12 + i * 16]], 5 + i, false, w * .75);
+  ln([[18, 20], [-10, 30], [-36, 26]], 9, false, w * .85);   // thumb
+  X.restore();
+}
+
+// ---- the first pull's damping curve (a live plot) ----
+function dampPlot(x, y, w, h, t, t0, dur) {
+  const span = dur + .5, u = tt => x + (tt - (t0 - .3)) / span * w, v = k => y + h - k * h * .82;
+  line(x, y + h, x + w + 14, y + h, 2.5); line(x, y + h, x, y - 12, 2.5);
+  X.save(); X.setLineDash([8, 8]); line(x, v(1), x + w, v(1), 1.6, PAL.ink, .5, 'butt'); X.restore();
+  text('到位', x + w + 12, v(1) + 8, { size: 20, font: F.sans, weight: 700 });
+  text('拉出 ↑', x + 12, y - 4, { size: 18, font: F.mono, weight: 600, col: PAL.ink2 });
+  text('t →', x + w + 14, y + h + 30, { size: 18, font: F.mono, weight: 600, col: PAL.ink2, align: 'right' });
+  text('SOFT-PULL · 阻尼曲线', x, y + h + 34, { size: 18, font: F.mono, weight: 600, col: PAL.ink, track: 1 });
+  const pts = [], tEnd = Math.min(t, t0 + dur + .2);
+  for (let tt = t0 - .3; tt <= tEnd; tt += .02) pts.push([u(tt), v(tt < t0 ? 0 : E.soft((tt - t0) / dur))]);
+  if (pts.length > 1) inkStroke(pts, { w: 4.5, taper: [.02, .02], wob: .3, seed: 501 });
+  const cur = pts[pts.length - 1]; if (cur) { circle(cur[0], cur[1], 10, { fill: PAL.orange, stroke: PAL.ink, w: 2.5 }); }
+  if (t < t0) { if (Math.floor(t * 3) % 2 === 0) text('READY_', x + 26, v(0) - 18, { size: 18, font: F.mono, weight: 600, col: PAL.grey }); }
+}
+// orange 嗒 with impact ticks. k = 0..1 age progress
+function daStamp(x, y, size, age, o = {}) {
+  if (age < 0) return;
+  const k = E.back(clamp(age / .22), 2.6), fade = 1 - clamp((age - (o.hold ?? 99)) / .25);
+  if (fade <= 0) return;
+  X.save(); X.globalAlpha *= fade; X.translate(x, y); X.scale(k, k);
+  marker('嗒', 0, 0, { size, col: PAL.orange, rot: o.rot ?? -.1, align: 'center' });
+  const r0 = size * .62, r1 = size * (.8 + .18 * E.out(clamp(age / .3)));
+  for (let i = 0; i < 5; i++) { const a = -2.5 + i * .5 + (o.rot ?? 0); inkStroke([[Math.cos(a) * r0, Math.sin(a) * r0], [Math.cos(a) * r1, Math.sin(a) * r1]], { w: size * .045, col: PAL.ink, taper: [.1, .5], seed: i + 7 }); }
+  X.restore();
+}
+
+// ============================================================ shots ============================================================
+const T_OPEN = BT(2);            // 1.554 — the door flies open on 我
+
+// ---- 0.0 – 5.96 · cold open → the black hole reveal (one take) ----
+function sHole(t) {
+  paperBG();
+  const o = t - T_OPEN, opened = o > 0;
+  // beat rattle (before the open): the door bangs against its catch, the whole cabinet shudders
+  let rat = .004 * (1 + Math.sin(t * 43)), shk = [0, 0], hitCO = 0;
+  if (!opened && t >= BT(0)) { const n = beatN(t), sb = t - BT(n), amp = n === 0 ? .6 : 1; hitCO = amp * Math.exp(-sb * 3.2); rat += amp * .075 * Math.exp(-sb * 5.5) * Math.abs(Math.sin(sb * 31)); shk = shake(t, 8 * amp * Math.exp(-sb * 7), 3); }
+  const glide = E.soft(o / 1.7), push = E.io(clamp(o / 4.6));
+  const sx = lerp(CX, 1325, glide) + shk[0], sy = lerp(532, 566, glide) + shk[1], px = lerp(610, 612, glide) + 40 * push;
+  const C = frameCam([0, 420, 0], -.05 * glide + .012 * Math.sin(t * .7), .1 + .03 * push, sx, sy, 840, px, { fov: 30 });
+  const door = opened ? 1.6 * spring(o, 1.5, .45) : rat;
+  const G = cabGeom(C, { door, hinge: 1 });
+  // the hole
+  const dc = P2(C, [0, 440, -260]), ow = dist(G.open[0][0], G.open[0][1], G.open[1][0], G.open[1][1]);
+  const hit = t > 4.9 ? pulse(t, 5) : 0, R = ow * .42 * (1 + .05 * hit);
+  const reveal = opened ? E.out5(clamp(o / .7)) : 0;
+  const L = { x: dc[0], y: dc[1], mode: 'pinch', R: opened ? R * .98 : 0,
+    e: opened ? lerp(110, R * 1.12, reveal) : 70 + 90 * hitCO, k: 1, sw: opened ? .9 + .5 * hit + .25 * Math.sin(t * .9) : .3 + .5 * hitCO };
+  warpGrid({ gap: 60, L, a: .075 });
+  const ring = { tilt: -.16, flat: .24, spin: 1 + .5 * hit + .3 * push, k: reveal };
+  if (opened) {
+    cabInterior(C, G, L, reveal);
+    ringLayer(t, dc[0], dc[1], R, ring, false);
+    blackDisc(dc[0], dc[1], R * E.out5(clamp(o / .45)), { tilt: ring.tilt, k: reveal });
+  }
+  cabBody(C, G);
+  const fl = P2(C, [0, 0, 0]); inkStroke([[fl[0] - 640, fl[1]], [fl[0] + 640, fl[1]]], { w: 3, taper: [.3, .3], seed: 5 });
+  if (!opened) {
+    // darkness leaks round the closed door, swelling on each beat
+    const leak = .55 + .6 * hitCO + Math.min(.6, rat * 6);
+    darkGlow(G.front, t, leak, { spread: 120 });
+    cabDoor(C, G);
+    gapLine(G.front, leak);
+  } else {
+    cabDoor(C, G);
+    ringLayer(t, dc[0], dc[1], R, ring, true);
+  }
+  // title stamp (beat 0) and 咚 (beat 1) — the cold-open hook
+  const fadeCO = 1 - clamp(o / .3);
+  if (t >= BT(0) && fadeCO > 0) {
+    const a = t - BT(0), k = E.out5(clamp(a / .16)), s = lerp(1.7, 1, k);
+    X.save(); X.globalAlpha *= clamp(a / .05) * fadeCO; X.translate(CX, 968); X.rotate(-.018); X.scale(s, s);
+    const tw = measure('一拉就到位', 40, F.serif, 900, 14);
+    X.strokeStyle = PAL.ink; X.lineWidth = 3; X.strokeRect(-tw / 2 - 28, -40, tw + 42, 64);
+    text('一拉就到位', 7, 8, { size: 40, font: F.serif, weight: 900, align: 'center', track: 14 });
+    text('THE BLACK-HOLE CABINET', 0, 62, { size: 17, font: F.mono, weight: 600, align: 'center', track: 4, col: PAL.ink2 });
+    X.restore();
+  }
+  if (t >= BT(1) && fadeCO > 0) {
+    const a = t - BT(1), k = E.back(clamp(a / .2), 2.4), ax = G.outer[3][0] - 190, ay = lerp(G.outer[3][1], G.outer[0][1], .3);
+    X.save(); X.globalAlpha *= fadeCO; X.translate(ax, ay); X.scale(k, k);
+    marker('咚', 0, 0, { size: 180, rot: -.14, align: 'center' });
+    for (let i = 0; i < 3; i++) { const aa = -.4 + i * .4, r0 = 118, r1 = 118 + 50 * E.out(clamp(a / .25)); inkStroke([[Math.cos(aa) * r0 + 24, Math.sin(aa) * r0], [Math.cos(aa) * r1 + 24, Math.sin(aa) * r1]], { w: 7, taper: [.1, .6], seed: 40 + i }); }
+    X.restore();
+  }
+  // lyric 0: 我家橱柜 / 深处有黑洞 — 黑洞 in orange
+  lyHero(0, t, { x: 118, y: 470, size: 136, align: 'left', hi: '黑洞', lead: 1.16, exit: 'fade', hold: .1 });
+  metaStrip(t, { br: 'CH.01  ·  THE BLACK-HOLE CABINET' });
+}
+
+// ---- 5.96 – 8.0 · kitchenware spirals in, detection boxes flip to 404 ----
+const SW = [   // kind, label, tagged (sung), vanishes, final angle, size
+  ['pot', '锅', 5.985, 6.667, -.5, 64], ['bowl', '碗', 6.326, 7.008, 1.9, 54],
+  ['ladle', '瓢', 6.667, 7.349, 3.9, 60], ['basin', '盆', 7.008, 7.69, 5.3, 62],
+];
+const SW2 = [['spoon', 7.5, 2.8, 38], ['lid', 8.3, 4.6, 46], ['chop', 8.0, 1.0, 42], ['cup', 8.9, 5.9, 34], ['plate', 9.4, 3.3, 50], ['spat', 9.8, .3, 40]];
+function swPos(tv, phv, t, cx, cy, R) {
+  const u = tv - t, r = R * (1.02 + 2.1 * u), ph = phv - 1.55 * Math.log(1 + 2.1 * u);
+  return [cx + Math.cos(ph) * r, cy + Math.sin(ph) * r * .86, r, ph];
+}
+function sSwallow(t, lt) {
+  paperBG();
+  const cx = 1370, cy = 560, R = lerp(185, 212, E.io(clamp(lt / 2))) * (1 + .04 * pulse(t, 6)), sw = 2.1 + lt * .35;
+  warpGrid({ gap: 60, L: { x: cx, y: cy, e: R * 1.08, R: R * .99, k: 1, sw, mode: 'pinch' }, a: .08 });
+  // spiral flow lines
+  for (let j = 0; j < 8; j++) {
+    const p0 = j * TAU / 8 + t * 1.25, pts = [];
+    for (let i = 0; i <= 40; i++) { const r = R * Math.exp(i / 40 * 1.75), ph = p0 - 1.55 * Math.log(r / R); pts.push([cx + Math.cos(ph) * r, cy + Math.sin(ph) * r * .86]); }
+    inkStroke(pts, { w: 3.2, taper: [.05, .9], wob: .4, seed: 200 + j, a: .55 });
+  }
+  circle(cx, cy, R, { fill: PAL.ink }); handCircle(cx, cy, R + 3, { w: 4, seed: 203 });
+  for (let i = 0; i < 2; i++) { const a0 = t * (2.4 - i) + i * 2; inkStroke(ell(cx, cy, R * (1.1 + i * .08), R * (1.1 + i * .08) * .86, 0, a0, a0 + 3.6, 40), { w: 3 - i, taper: [.6, .1], wob: .3, seed: 210 + i }); }
+  // minor debris (never tagged)
+  SW2.forEach(([kind, tv, phv, sz], i) => {
+    const [x, y, r, ph] = swPos(tv, phv, t, cx, cy, R); if (r > 1300) return;
+    const st = 1 + 2.2 * Math.pow(clamp((2.2 * R - r) / (1.2 * R)), 1.4);
+    ware(kind, x, y, sz * (.55 + .45 * clamp(r / (2.5 * R))), t * (1.2 + hash(i)) + i, { seed: 90 + i, stretch: st, sdir: ph });
+  });
+  // the four sung items: detection box → 404
+  SW.forEach(([kind, lab, tt, tv, phv, sz], i) => {
+    const alive = t < tv, [x, y, r, ph] = swPos(Math.max(tv, t), phv, alive ? t : tv, cx, cy, R);
+    if (alive && r < 1300) {
+      const st = 1 + 2.4 * Math.pow(clamp((2.3 * R - r) / (1.25 * R)), 1.4), sc = sz * (.62 + .38 * clamp(r / (2.4 * R)));
+      const fade = clamp((tv - t) / .07);
+      const trail = []; for (let j = 0; j <= 12; j++) { const q = swPos(tv, phv, t - j * .03, cx, cy, R); trail.push([q[0], q[1]]); }
+      inkStroke(trail.reverse(), { w: 7, taper: [.95, .05], seed: 220 + i, a: .45 * fade });
+      ware(kind, x, y, sc, t * (1.4 + i * .3) * (i % 2 ? -1 : 1) + i * 1.3, { seed: 230 + i, stretch: st, sdir: ph, a: fade });
+    }
+    if (t >= tt) {
+      const bw = sz * 2.5, bh = sz * 1.9, fx = alive ? x : x, fy = alive ? y : y;
+      const gone = t - tv, kk = alive ? clamp((t - tt) / .25) : clamp(gone / .25), a = alive ? 1 : 1 - clamp((gone - .55) / .35);
+      if (a > 0) bbox(fx - bw / 2, fy - bh / 2, bw, bh, alive ? `${lab} · 0.9${7 - i}` : `${lab} · 404`, { k: kk, a, dash: alive ? [] : [10, 8], size: 22, lw: 3 });
+    }
+  });
+  lySide(1, t, { x: 116, y: 590, size: 106, num: true });
+  if (t > 7.69) { const k = E.out5(clamp((t - 7.69) / .2)); text('ERR 404 · NOT FOUND', 116, 780, { size: 22, font: F.mono, weight: 700, col: PAL.cobalt, a: k, track: 2 }); }
+}
+
+// ---- 8.0 – 9.0 · 跪着翻找: LAN head-first in the cabinet, legs kicking ----
+function sKneel(t, lt) {
+  paperBG();
+  const z = lt * .04;
+  const C = frameCam([0, 360, 60], 1.02, .1, 1250, 520, 840, 700 * (1 + z), { fov: 30 });
+  warpGrid({ gap: 60, L: { ...(() => { const c = P2(C, [0, 440, -200]); return { x: c[0], y: c[1] }; })(), e: 120, R: 0, k: 1, sw: .6, mode: 'pinch' }, a: .06 });
+  const G = cabGeom(C, { door: 1.75, hinge: -1 });
+  // floor
+  const f0 = P2(C, [0, 0, 700]), f1 = P2(C, [0, 0, -560]);
+  inkStroke([[-40, f0[1] + (f0[1] - f1[1]) * .0], [W + 40, f0[1]]], { w: 3, taper: [0, 0], seed: 3 });
+  cabDoor(C, G, { hinge: -1 });
+  cabBody(C, G);
+  fillPoly(G.open, PAL.ink);
+  // LAN: knees on the floor in front of the opening; everything that enters the opening is swallowed
+  const K = P2(C, [0, 0, 330]), U = 56;
+  X.save(); X.beginPath(); X.rect(0, 0, W, H); poly(G.open); X.clip('evenodd');
+  kneelLan(K[0] - 20, K[1] - 4, U, t);
+  X.restore();
+  // inside the dark: rummaging marks in paper colour
+  X.save(); poly(G.open); X.clip();
+  const oc = [(G.open[0][0] + G.open[2][0]) / 2, (G.open[0][1] + G.open[2][1]) / 2];
+  for (let i = 0; i < 3; i++) { const a = t * 9 + i * 2.1, r = 40 + i * 16; inkStroke(ell(oc[0] + 10, oc[1] + 60, r, r * .6, 0, a, a + 1.4, 14), { w: 3.5, col: PAL.paper, taper: [.2, .6], seed: 330 + i, a: .8 }); }
+  text('?', oc[0] + 34 + Math.sin(t * 8) * 6, oc[1] - 30, { size: 64, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: .15 });
+  text('?', oc[0] - 34, oc[1] - 70 + Math.cos(t * 7) * 5, { size: 44, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: -.2, a: .8 });
+  X.restore();
+  // stuff tossed out over her shoulder, on the 8ths
+  const tossK = ['lid', 'spoon', 'bowl', 'cup', 'chop', 'plate'];
+  for (let i = 0; i < 6; i++) {
+    const t0 = 7.9 + i * .17, a = t - t0; if (a < 0 || a > 1.4) continue;
+    const vx = -(620 + hash(i) * 380), vy = -(760 + hash(i + 4) * 300), x = oc[0] - 20 + vx * a, y = oc[1] + 20 + vy * a + 1500 * a * a;
+    ware(tossK[i], x, y, 34 + hash(i + 9) * 12, a * (7 + i) * (i % 2 ? 1 : -1), { seed: 350 + i });
+  }
+  lyMarker(2, t, { x: 118, y: 250, size: 150, align: 'left', rot: -.05 });
+}
+
+// ---- 9.0 – 12.47 · spice bottles domino on the syllables; search finds no salt ----
+const BOT = [   // half-width profile [r, y] from the base, and the paper label
+  [[[0, 0], [32, 0], [34, 6], [34, 160], [27, 182], [13, 206], [13, 238], [16, 241], [16, 262], [0, 262]], '酱'],
+  [[[0, 0], [48, 0], [50, 6], [50, 118], [42, 126], [42, 134], [46, 136], [46, 158], [0, 158]], '糖'],
+  [[[0, 0], [27, 0], [29, 10], [23, 62], [29, 112], [27, 176], [18, 194], [0, 200]], '椒'],
+  [[[0, 0], [36, 0], [38, 6], [38, 204], [29, 234], [14, 258], [14, 294], [17, 297], [17, 316], [0, 316]], '油'],
+  [[[0, 0], [31, 0], [33, 5], [33, 128], [23, 144], [23, 168], [26, 170], [26, 188], [0, 188]], '醋'],
+  [[[0, 0], [40, 0], [42, 6], [42, 104], [35, 112], [35, 122], [39, 124], [39, 140], [0, 140]], '蚝'],
+  [[[0, 0], [30, 0], [32, 6], [32, 178], [25, 196], [12, 214], [12, 248], [15, 251], [15, 268], [0, 268]], '酒'],
+];
+const BOT_T = LY[3].t.slice(0, 7);   // each bottle starts to fall on a syllable of 调料瓶倒成一片
+const FLOOR_S = 884;
+const botLayout = (() => {
+  const L = []; let x = 600;
+  BOT.forEach(([pf], i) => { const r = Math.max(...pf.map(p => p[0])), h = pf[pf.length - 1][1]; L.push({ x: x + r, r, h, rb: pf[1][0] }); x += 2 * r + (i < BOT.length - 1 ? 0 : 0) + h * .5; });
+  return L;
+})();
+function botAngle(i, t) {
+  const L = botLayout[i], s = BOT_T[i], last = i === BOT.length - 1;
+  if (t < s) return 0;
+  const nx = last ? 1e9 : botLayout[i + 1].x - botLayout[i + 1].r, d = nx - (L.x + L.rb), thc = last ? Math.PI / 2 - .02 : Math.asin(clamp(d / L.h, 0, .97));
+  const tc = last ? s + .36 : BOT_T[i + 1];
+  if (t < tc) { const k = (t - s) / (tc - s); return thc * k * k; }
+  if (last) return thc - .06 * Math.exp(-(t - tc) * 7) * Math.abs(Math.sin((t - tc) * 22));
+  const nxt = botAngle(i + 1, t);
+  return Math.min(thc + nxt * .55, 1.3);
+}
+function drawBottle(i, th) {
+  const [pf, lab] = BOT[i], L = botLayout[i];
+  const pts = [...pf.map(([r, y]) => [r, -y]), ...pf.slice().reverse().map(([r, y]) => [-r, -y])];
+  X.save(); X.translate(L.x + L.rb, FLOOR_S); X.rotate(th); X.translate(-L.rb, 0);
+  fillPoly(pts, PAL.paper); pline(pts, 3, PAL.ink, true, 1, 400 + i * 7);
+  const ly0 = -L.h * .3, ly1 = -L.h * .58, lw = L.r * .82;
+  fillPoly([[-lw, ly0], [lw, ly0], [lw, ly1], [-lw, ly1]], PAL.paper2); pline([[-lw, ly0], [lw, ly0], [lw, ly1], [-lw, ly1]], 1.8, PAL.ink, true, 1, 410 + i);
+  text(lab, 0, (ly0 + ly1) / 2 + 13, { size: 36, font: F.serif, weight: 900, align: 'center' });
+  X.restore();
+}
+function sSpice(t, lt) {
+  paperBG();
+  warpGrid({ gap: 60, L: { x: 1500, y: 1200, e: 260, R: 0, k: 1, sw: .3, mode: 'pinch' }, a: .06 });
+  inkStroke([[470, FLOOR_S], [1900, FLOOR_S]], { w: 3, taper: [.08, 0], seed: 9 });
+  X.save(); X.globalAlpha = .08; rect(470, FLOOR_S, 1500, 14, PAL.ink); X.restore();
+  for (let i = BOT.length - 1; i >= 0; i--) drawBottle(i, botAngle(i, t));
+  // impact ticks on each hit
+  for (let i = 1; i < BOT.length; i++) {
+    const a = t - BOT_T[i]; if (a < 0 || a > .3) continue;
+    const L = botLayout[i], k = E.out(a / .3), cxh = L.x - L.r, cyh = FLOOR_S - L.h * .85;
+    for (let j = 0; j < 3; j++) { const aa = Math.PI + (j - 1) * .5; inkStroke([[cxh + Math.cos(aa) * 20, cyh + Math.sin(aa) * 20], [cxh + Math.cos(aa) * (20 + 40 * k), cyh + Math.sin(aa) * (20 + 40 * k)]], { w: 4, taper: [.1, .6], seed: 440 + i * 3 + j, a: 1 - k }); }
+  }
+  if (t < 10.5) text('▶▶ SLOW-MO  0.25×', W - 72, 96, { size: 20, font: F.mono, weight: 600, align: 'right', col: PAL.ink2, track: 2, a: .8 });
+  // the search bar slides in with the drawer curve on beat 15
+  const sIn = E.soft((t - BT(15)) / .9);
+  if (sIn > 0) {
+    const bx = lerp(W + 40, 1010, sIn), by = 196, bw = 780;
+    const typed = t >= 11.08;
+    searchBar(bx, by, bw, typed ? '盐' : '', 11.08, 11.2, t, { h: 84, size: 42 });
+    if (!typed) text('搜索调料…', bx + 96, by + 56, { size: 38, font: F.sans, weight: 400, col: PAL.grey });
+    const r = t - BT(17);
+    if (r > 0) {
+      const hk = E.out5(clamp(r / .3)), ph = 250 * hk, ry = by + 84 + 14;
+      rect(bx + 8, ry + 8, bw, ph, PAL.ink); rect(bx, ry, bw, ph, PAL.paper); X.save(); X.strokeStyle = PAL.ink; X.lineWidth = 3; X.strokeRect(bx, ry, bw, ph); X.restore();
+      X.save(); X.beginPath(); X.rect(bx, ry, bw, ph); X.clip();
+      text('「盐」', bx + 30, ry + 66, { size: 40, font: F.sans, weight: 800 });
+      text('0 个结果', bx + 150, ry + 66, { size: 40, font: F.sans, weight: 800, col: PAL.ink });
+      text('调料区 · 深处 · 黑洞', bx + bw - 30, ry + 64, { size: 18, font: F.mono, weight: 600, col: PAL.grey, align: 'right' });
+      line(bx + 30, ry + 104, bx + bw - 30, ry + 104, 1.5, PAL.ink, .3);
+      text('你是不是要找：', bx + 30, ry + 162, { size: 30, font: F.sans, weight: 500, col: PAL.ink2 });
+      const lx = bx + 30 + measure('你是不是要找：', 30, F.sans, 500);
+      text('拉篮', lx, ry + 162, { size: 30, font: F.sans, weight: 800, col: PAL.cobalt });
+      line(lx, ry + 172, lx + measure('拉篮', 30, F.sans, 800), ry + 172, 3, PAL.cobalt);
+      text('？', lx + measure('拉篮', 30, F.sans, 800) + 4, ry + 162, { size: 30, font: F.sans, weight: 500, col: PAL.ink2 });
+      text('↳ 全拉出 · 一眼看见', bx + 30, ry + 214, { size: 20, font: F.mono, weight: 600, col: PAL.grey });
+      X.restore();
+      // the cursor drifts to 拉篮 and clicks
+      const cT = 12.12, mk = E.io(clamp((t - 11.95) / .3)), tx = lx + 34, ty = ry + 160;
+      if (t > 11.95) cursor(lerp(tx + 260, tx, mk), lerp(ty + 160, ty, mk), { click: t > cT ? clamp((t - cT) / .3) : 0, s: 1.5 });
+    }
+  }
+  lyVertical(3, t, { x: 350, y: 150, size: 92, gap: 1.34, font: F.serif, weight: 900 });
+}
+
+// ---- 12.47 – 16.56 · the first pull: space snaps straight, the steel basket glides out ----
+const T_PULL = LY[4].t[5] - .004;   // 拉
+function sPull(t, lt) {
+  paperBG();
+  const pk = E.soft((t - T_PULL) / 1.4), ext = 420 * pk, orb = E.io(clamp(lt / 4.4));
+  const opt = { sx: 1270, sy: 600, px: 800, yaw: lerp(-.26, -.66, orb), pitch: lerp(.3, .5, orb) };
+  // residual warp that snaps straight on the pull, with a spring wobble
+  const Cg = frameCam([0, 150, 230 + ext * .5], opt.yaw, opt.pitch, opt.sx, opt.sy, 760, opt.px, { fov: 28 });
+  const fc = P2(Cg, [0, 170, 460 + ext]);
+  const kWarp = t < T_PULL ? .85 + .1 * Math.sin(t * 3) : .95 * (1 - spring(t - T_PULL, 2.2, .3));
+  warpGrid({ gap: 60, L: { x: fc[0], y: fc[1], e: 190, R: 0, k: kWarp, sw: .5, mode: 'pinch' }, a: .075 });
+  const shine = t > T_PULL + .5 ? lerp(-460, 460, E.io(clamp((t - T_PULL - .5) / 1.3))) : null;
+  const C = productShot(ext, { ...opt, style: 'steel', shine });
+  // darkness still leaking round the closed front — gone once it's pulled
+  const fq = [[-316, 330, 461 + ext], [316, 330, 461 + ext], [316, 10, 461 + ext], [-316, 10, 461 + ext]].map(p => P2(C, p));
+  if (pk < .4) darkRays(fq, t, (1 - pk / .4) * (.55 + .2 * pulse(t, 4)), { len: 55, w: 3.5, left: .8, top: .8, bot: .5, right: .8 });
+  // the hand: reaches, grips on 我, yanks on 拉, lets go
+  const hp = P2(C, [0, 292, 462 + ext]), tIn = 13.3, tGrip = 14.25;
+  if (t > tIn && t < T_PULL + 1.3) {
+    const ap = E.io(clamp((t - tIn) / (tGrip - tIn))), out = E.in(clamp((t - T_PULL - .8) / .45));
+    const x = lerp(hp[0] + 620, hp[0], ap) + out * 520, y = lerp(hp[1] + 460, hp[1], ap) + out * 520;
+    hand(x, y, 150, .62, { grip: clamp((t - tGrip + .15) / .15) });
+  }
+  if (t > T_PULL && t < T_PULL + .5) { const a = (t - T_PULL) / .5; for (let i = 0; i < 4; i++) { const yy = hp[1] + 60 + i * 38; inkStroke([[hp[0] + 180 + i * 30, yy], [hp[0] + 420 + i * 30, yy + 60]], { w: 5, taper: [.8, .1], seed: 520 + i, a: (1 - a) * .7 }); } }
+  // glints on the beats once it's out
+  for (const n of [22, 23]) { const a = t - BT(n); if (a > 0 && a < .45) { const g = pin(C, n === 22 ? [-280, 210, 440 + ext] : [270, 210, 20 + ext]); sparkle(g[0], g[1], 46, { k: Math.sin(a / .45 * Math.PI), rot: a * 2 }); } }
+  lySide(4, t, { x: 116, y: 356, size: 104, hi: '拉' });
+  dampPlot(128, 650, 470, 170, t, T_PULL, 1.4);
+}
+
+// ---- 16.56 – 17.9 · LAN close-up: star eyes, blush ----
+function sFace(t, lt) {
+  paperBG();
+  const cx = 1080, cy = 520, z = 1 + .07 * E.io(clamp(lt / 1.4)), p = pulse(t, 5);
+  halftone(0, 0, W, H, (x, y) => clamp((Math.hypot(x - cx, (y - cy) * 1.3) - 520) / 900) * .9, { gap: 24, a: .22 });
+  speedLines(cx, cy, 470, 1400, 64, { a: .14, w: 8, seed: 9, rot: lt * .08 });
+  cam(cx, cy, z, 0);
+  const U = 150, pose0 = { ...KP.frame, head: .12 * Math.sin(bp(t) * Math.PI), lean: .03 * Math.sin(bp(t) * Math.PI) };
+  figure(cx, cy + 9.35 * U - 40 * p, U, pose0, { who: 'lan', face: 'star', blush: 1.2 + .5 * p, seed: 610 });
+  camEnd();
+  for (let i = 0; i < 5; i++) {
+    const a = t - BT(24) - i * .136, k = a > 0 ? Math.sin(clamp(a / .5) * Math.PI) : 0;
+    const ang = -2.6 + i * .55, r = 330 + (i % 2) * 70; sparkle(cx + Math.cos(ang) * r * 1.15, cy + Math.sin(ang) * r, 34 + (i % 3) * 12, { k, rot: a });
+  }
+  text('LAN  小篮', 90, H - 110, { size: 30, font: F.smiley, col: PAL.ink });
+  text('心动 · DETECTED', 90, H - 74, { size: 18, font: F.mono, weight: 600, col: PAL.ink2, track: 3 });
+}
+
+// ---- 17.9 – 20.65 · slow-mo soft close, the first 嗒 ----
+const T_DA = BT(28);   // 19.286 刚
+function closeExt(t) {
+  if (t < 17.92) return 420;
+  if (t < 18.6) return lerp(420, 110, E.io((t - 17.92) / .68) * .96 + (t - 17.92) / .68 * .04);
+  return 110 * (1 - E.soft((t - 18.6) / (T_DA - 18.6 + .02)));
+}
+function sClose(t, lt) {
+  paperBG();
+  gridScroll(t);
+  const ext = closeExt(t);
+  const C = productShot(ext, { sx: 1230, sy: 600, px: 980, yaw: lerp(-.98, -.9, E.io(clamp(lt / 2.7))), pitch: .26, style: 'steel', shine: lerp(300, -300, clamp(lt / 2.5)) });
+  const rail = pin(C, [294, 142, 300 + ext]);
+  const ck = clamp((t - 18.45) / .7);
+  callout(rail[0], rail[1], rail[0] - 150, rail[1] - 250, 'SOFT-CLOSE 阻尼缓冲', { k: ck, dir: 1 });
+  const dp = pin(C, [320, 300, 470 + ext]);
+  daStamp(dp[0] + 40, dp[1] - 150, 210, t - T_DA, {});
+  if (t > T_DA - .05 && t < T_DA + .5) { const k = 1 - (t - T_DA) / .5; handCircle(dp[0], dp[1], 40 + 150 * (1 - k), { w: 4 * k, col: PAL.ink, seed: 700 }); }
+  text('SLOW-MO', W - 72, 96, { size: 20, font: F.mono, weight: 600, align: 'right', col: PAL.ink2, track: 3, a: .8 });
+  lyHero(5, t, { x: 116, y: 450, size: 150, align: 'left', lead: 1.18, exit: 'fade', hold: .25 });
+}
+// the grid scrolls left, accelerating into the chorus
+function gridScroll(t) {
+  const a = Math.max(0, t - 17.9), b = Math.max(0, t - 20.6);
+  const pos = 26 * a + 140 * Math.pow(b, 2.3);
+  warpGrid({ gap: 60, ox: -pos, a: .075 + .03 * clamp(b / 2.4) });
+  return pos;
+}
+// ---- 20.65 – 23.0 · accelerating cuts: out, in 嗒, out, in 嗒 (2 beats → 1 → ½ → ½) ----
+function buildShot(v) {
+  return (t, lt) => {
+    paperBG();
+    const pos = gridScroll(t);
+    const dir = v.dir, k = dir > 0 ? E.soft(lt / (v.d ?? .55)) : 1 - E.out5(lt / (v.d ?? .24));
+    const ext = 420 * k;
+    productShot(ext, { sx: v.sx ?? 1250, sy: v.sy ?? 590, px: v.px, yaw: v.yaw + lt * (v.drift ?? .05), pitch: v.pitch, style: 'steel', shine: lerp(-400, 400, clamp(lt / .6)) });
+    if (dir < 0) daStamp(v.dx ?? 1600, v.dy ?? 260, v.ds ?? 170, lt - (v.d ?? .24) + .02, { rot: v.rot ?? -.1 });
+    // speed streaks grow as the build accelerates
+    const sp = clamp((t - 21.3) / 1.6);
+    if (sp > 0) for (let i = 0; i < 9; i++) {
+      const y = 120 + hash(i * 3.3) * 840, l = 180 + hash(i) * 380, x = W - ((pos * (1.4 + hash(i + 2)) + hash(i + 7) * W) % (W + l * 2)) + l * .5;
+      inkStroke([[x, y], [x + l * sp, y]], { w: 3 + hash(i + 5) * 3, taper: [.05, .9], seed: 800 + i, a: .5 * sp });
+    }
+    lyHero(5, t, { x: 116, y: 450, size: 150, align: 'left', lead: 1.18, exit: 'fade', hold: .25 });
+    metaStrip(t, { br: 'NEXT ▸ 一拉就到位', a: .9 });
+  };
+}
+
+chapter('verse1', 0, 23.0, [
+  [0, sHole],
+  [5.96, sSwallow],
+  [8.0, sKneel],
+  [9.0, sSpice],
+  [BT(18), sPull],
+  [BT(24), sFace],
+  [17.9, sClose],
+  [BT(30), buildShot({ dir: 1, d: .6, px: 860, yaw: -.5, pitch: .44 })],
+  [BT(32), buildShot({ dir: -1, d: .22, px: 1100, yaw: -1.05, pitch: .22, sx: 1180, dx: 1560, dy: 250 })],
+  [BT(32.5), buildShot({ dir: 1, d: .3, px: 760, yaw: -.25, pitch: .95, sy: 610 })],
+  [BT(33), buildShot({ dir: -1, d: .2, px: 1250, yaw: -.62, pitch: .4, sx: 1180, sy: 640, dx: 1500, dy: 230, ds: 200, rot: .08 })],
+]);
+})();
