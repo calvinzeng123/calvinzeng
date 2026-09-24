@@ -365,8 +365,9 @@ function shotSplit(t, lt) {
       // opaque lower-third with an ink rule
       const [nm, no] = MEMBER[who];
       rect(x0, H - 118, pw, 160, bg); rect(x0, H - 121, pw, 3, PAL.ink);
-      text(nm, x0 + 34, H - 62, { size: 40, font: who === 'lan' ? F.sans : F.grotesk, weight: 700, track: 2 });
-      mono(no + ' / 05', x0 + 36, H - 30, { a: .8, size: 17 });
+      const inset = i === 0 ? 64 : 34;   // the left panel survives the cut-frame punch-in
+      text(nm, x0 + inset, H - 62, { size: 40, font: who === 'lan' ? F.sans : F.grotesk, weight: 700, track: 2 });
+      mono(no + ' / 05', x0 + inset + 2, H - 30, { a: .8, size: 17 });
       if (who === 'lan') circle(x0 + pw - 44, H - 76, 9, { fill: PAL.orange });
       X.restore();
       if (who === 'lan') { X.save(); X.strokeStyle = PAL.orange; X.lineWidth = 8; X.strokeRect(x0 + 4, 4, pw - 8, H - 8); X.restore(); }
@@ -473,7 +474,7 @@ function shotGrid(t, lt) {
   }
   rect(cw, -40, g, H + 80, PAL.ink); rect(2 * cw + g, -40, g, H + 80, PAL.ink); rect(-40, ch, W + 80, g, PAL.ink); rect(-40, 2 * ch + g, W + 80, g, PAL.ink);
   X.save(); X.strokeStyle = t > b(215) - .02 ? PAL.ink : PAL.orange; X.lineWidth = 8; X.strokeRect(cw + g + 4, ch + g + 4, cw - 8, ch - 8); X.restore();
-  for (let i = 0; i < 9; i++) { const c = i % 3, r = Math.floor(i / 3); mono('CAM ' + (i + 1), c * (cw + g) + 22, r * (ch + g) + 36, { size: 15, col: i === 4 && t < b(215) - .02 ? PAL.paper : PAL.ink, a: .6 }); }
+  for (let i = 0; i < 9; i++) { const c = i % 3, r = Math.floor(i / 3); mono('CAM ' + (i + 1), c * (cw + g) + (c === 0 ? 64 : 22), r * (ch + g) + 36, { size: 15, col: i === 4 && t < b(215) - .02 ? PAL.paper : PAL.ink, a: .6 }); }
   camEnd();
 }
 

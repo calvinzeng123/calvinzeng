@@ -473,7 +473,7 @@
     const C = frameCam([0, 90, ext + 220], .7 + lt * .35, 1.12, 1210, 540, 760, 1060, { fov: 26 });
     render3(CARCASS(), C, { style: 'ink', lw: .7, a: .4 });
     const box = screenBox(C, boxCorners(-280, 60, ext, 280, 210, ext + 440));
-    steelDrawer(C, ext, null, -1);
+    steelDrawer(C, ext, null, 1);   // far (x = -294) rail behind the basket, near rail last
     sheen(box, t, { rot: .5, w: 170 });
     const pts = [[-280, 210, ext + 440], [280, 210, ext], [280, 210, ext + 440], [-280, 210, ext]].map(p => pin(C, p));
     beatGlints(t, pts, 115);

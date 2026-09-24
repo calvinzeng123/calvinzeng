@@ -104,6 +104,7 @@ function plate(lt, no, zh, en, o = {}) {
   const at = o.at ?? .2, k = E.soft(seg(lt, at, at + 1.1)); if (k <= 0) return;
   const right = o.align === 'right', x = right ? W - 104 : 104, y = o.y ?? 972, al = right ? 'right' : 'left';
   X.save(); X.translate((right ? 1 : -1) * (1 - k) * 1150, 0);
+  rect(right ? x - 470 : x - 24, y - 86, 494, 132, PAL.paper);   // knockout: cabinet linework never runs under the caption
   line(right ? x - 440 : x, y - 64, right ? x : x + 440, y - 64, 2, PAL.ink);
   text('展品 ' + no + '  ·  ' + zh, x, y - 16, { size: 38, font: F.serif, weight: 900, align: al });
   text(en, x, y + 24, { size: 27, font: F.serifI, col: PAL.ink2, align: al });

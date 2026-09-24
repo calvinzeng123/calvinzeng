@@ -86,11 +86,11 @@ function figure(x, y, s, P, o = {}) {
   if (o.shadow !== false) { X.save(); X.globalAlpha *= .12 * clamp(1 - P.dy * .3, .3, 1); X.fillStyle = col; X.beginPath(); X.ellipse(x, y + lw * .4, 2.2 * U * clamp(1 - P.dy * .15, .5, 1), .28 * U, 0, 0, TAU); X.fill(); X.restore(); }
   const st = (pts, sd, w = lw, taper = [.15, .2]) => inkStroke(pts, { w, col, taper, wob: .5, seed: seed + sd, press: .2 });
   // legs + little feet
-  const leg = (g, side, sd) => { const kx = hx + side * 0 + g[0], ky = hy + g[1], fx = hx + g[2], fy = hy + g[3]; st([[hx + side * .25 * U, hy], [kx, ky], [fx, fy], [fx + side * .55 * U, fy + .02 * U]], sd, lw, [.02, .12]); };
+  const leg = (g, side, sd) => { const kx = hx + side * 0 + g[0], ky = hy + g[1], fx = hx + g[2], fy = hy + g[3]; st([[hx + side * .08 * U, hy - .2 * U], [kx, ky], [fx, fy], [fx + side * .55 * U, fy + .02 * U]], sd, lw, [0, .12]); };
   leg(Lg, -1, 1); leg(Rg, 1, 2);
   // torso (slight curve)
   const mx = (hx + nx) / 2 - Math.cos(lean) * .15 * U, my = (hy + ny) / 2;
-  st([[hx, hy], [mx, my], [nx, ny], [nx + Math.sin(lean) * neck, ny - Math.cos(lean) * neck]], 3, lw * 1.05, [.05, .05]);
+  st([[hx, hy + .05 * U], [mx, my], [nx, ny], [nx + Math.sin(lean) * neck, ny - Math.cos(lean) * neck]], 3, lw * 1.05, [0, .05]);
   // arms from the shoulder point (just below the neck)
   const shx = nx - Math.sin(lean) * .25 * U, shy = ny + Math.cos(lean) * .25 * U;
   // distance from the head centre to a segment (for arm/head clearance)

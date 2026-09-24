@@ -385,14 +385,14 @@
     for (let i = 0; i < 3; i++) line(tipX - 70 - i * 26, tipY + 30 + i * 22, tipX - 150 - i * 40, tipY + 60 + i * 52, 3, PAL.ink, .35);   // wind
     // the dialog
     const dk = clamp((lt - .05) / .2);
-    win(420, 150, 640, 270, 'chart.exe', { k: dk, body: (x, y, ww, hh) => {
+    win(420, 150, 640, 270, 'chart.exe', { k: dk, body: (x, y, ww, hh) => { const HB = 230;   // final body height: buttons stay put while the window opens
       rect(x + 34, y + 34, 64, 64, PAL.orange); text('!', x + 66, y + 88, { size: 56, font: F.heavy, weight: 900, col: PAL.paper, align: 'center' });
       text('Y 轴溢出', x + 124, y + 80, { size: 50, font: F.heavy, weight: 900, col: PAL.ink });
       text('收纳效率已超出图表上限', x + 126, y + 124, { size: 24, font: F.sans, weight: 500, col: PAL.ink2 });
-      rect(x + ww - 330, y + hh - 70, 140, 48, PAL.paper2); X.save(); X.strokeStyle = PAL.ink; X.lineWidth = 2.5; X.strokeRect(x + ww - 330, y + hh - 70, 140, 48); X.restore();
-      text('忽略', x + ww - 260, y + hh - 37, { size: 22, font: F.sans, weight: 700, col: PAL.ink, align: 'center' });
-      rect(x + ww - 176, y + hh - 70, 146, 48, PAL.ink);
-      text('继续拉 →', x + ww - 103, y + hh - 37, { size: 22, font: F.sans, weight: 800, col: PAL.paper, align: 'center' });
+      rect(x + ww - 330, y + HB - 70, 140, 48, PAL.paper2); X.save(); X.strokeStyle = PAL.ink; X.lineWidth = 2.5; X.strokeRect(x + ww - 330, y + HB - 70, 140, 48); X.restore();
+      text('忽略', x + ww - 260, y + HB - 37, { size: 22, font: F.sans, weight: 700, col: PAL.ink, align: 'center' });
+      rect(x + ww - 176, y + HB - 70, 146, 48, PAL.ink);
+      text('继续拉 →', x + ww - 103, y + HB - 37, { size: 22, font: F.sans, weight: 800, col: PAL.paper, align: 'center' });
     } });
     cursor(420 + 640 - 52 + 40 * (1 - E.out(clamp(lt / .4))), 150 + 270 - 50 + 50 * (1 - E.out(clamp(lt / .4))), { click: clamp((lt - .45) / .2) });
     text('FIG. 3 (cont.)', 290, H - 132, { size: 20, font: MONO, weight: 600, col: PAL.grey, track: 2 });
