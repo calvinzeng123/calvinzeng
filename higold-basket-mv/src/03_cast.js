@@ -21,8 +21,8 @@ const KP = {
   ready: pose({ sL: .35, eL: .9, sR: .35, eR: .9, hL: .16, hR: .16, kL: .1, kR: .1 }),
   hips: pose({ sL: .9, eL: -1.9, sR: .9, eR: -1.9, hL: .14, hR: .14 }),                         // hands on hips
   // the signature move 拉 (pull): reach out, grab, yank back to the hip
-  reach: pose({ lean: .08, sR: 1.45, eR: .05, sL: .9, eL: -1.9, hL: .08, hR: .28, kR: .05, head: .06 }),
-  yank: pose({ lean: -.16, dy: -.25, sR: .7, eR: -1.7, sL: .9, eL: -1.9, hL: .22, kL: .35, hR: .2, kR: .35, head: -.12, squash: .06 }),
+  reach: pose({ lean: .14, sR: 1.62, eR: .02, sL: .75, eL: -1.7, hL: .06, hR: .38, kR: .08, head: .1 }),                   // arm shoots out to grab the handle
+  yank: pose({ lean: -.3, dy: -.42, sR: .42, eR: -2.15, sL: 1.15, eL: .85, hL: .3, kL: .55, hR: .26, kR: .5, head: -.22, squash: .08 }),  // fist yanked to the hip, body thrown back
   point: pose({ lean: -.05, sR: 2.5, eR: 0, sL: .3, eL: .4, hL: .1, hR: .22, head: .1 }),         // point up-right
   pointDown: pose({ lean: .1, sR: .85, eR: 0, sL: .4, eL: .5, hL: .25, kL: .3, hR: .1, head: .15 }),
   armsUp: pose({ dy: .2, sL: 2.45, eL: .12, sR: 2.45, eR: .12, hL: .1, hR: .1 }),   // wide V so the arms clear the head
@@ -93,10 +93,19 @@ function figure(x, y, s, P, o = {}) {
   st([[hx, hy], [mx, my], [nx, ny], [nx + Math.sin(lean) * neck, ny - Math.cos(lean) * neck]], 3, lw * 1.05, [.05, .05]);
   // arms from the shoulder point (just below the neck)
   const shx = nx - Math.sin(lean) * .25 * U, shy = ny + Math.cos(lean) * .25 * U;
+  // distance from the head centre to a segment (for arm/head clearance)
+  const segD = (ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy || 1, k = clamp(((hcx - ax) * dx + (hcy - ay) * dy) / l); return Math.hypot(ax + dx * k - hcx, ay + dy * k - hcy); };
   const arm = (sa, ea, side, sd) => {
-    const a1 = lean + sa * side, a2 = lean + (sa + ea) * side;
-    const ex = shx + Math.sin(a1) * ua, ey = shy + Math.cos(a1) * ua, hx2 = ex + Math.sin(a2) * fa, hy2 = ey + Math.cos(a2) * fa;
-    return { pts: [[shx, shy], [ex, ey], [hx2, hy2]], sd, up: hy2 < shy - .6 * U || ey < shy - .9 * U };
+    const geo = (sa2, ea2) => { const a1 = lean + sa2 * side, a2 = lean + (sa2 + ea2) * side, ex = shx + Math.sin(a1) * ua, ey = shy + Math.cos(a1) * ua; return [ex, ey, ex + Math.sin(a2) * fa, ey + Math.cos(a2) * fa]; };
+    let [ex, ey, hx2, hy2] = geo(sa, ea);
+    const up = hy2 < shy - .6 * U || ey < shy - .9 * U;
+    // raised arms: swing the arm outward (and open the elbow) until it clears the head, so it never cuts through the face
+    const sx0 = () => [lerp(shx, ex, .35), lerp(shy, ey, .35)];
+    if (up && o.clear !== false) for (let k = 0; k < 24 && Math.min(segD(...sx0(), ex, ey), segD(ex, ey, hx2, hy2)) < headR * 1.12; k++) {
+      if (segD(...sx0(), ex, ey) < headR * 1.12) sa -= .06; else ea -= .08;
+      [ex, ey, hx2, hy2] = geo(sa, ea);
+    }
+    return { pts: [[shx, shy], [ex, ey], [hx2, hy2]], sd, up };
   };
   // raised arms are drawn AFTER the head so the head's paper fill never swallows them
   const AL = arm(P.sL, P.eL, -1, 4), AR = arm(P.sR, P.eR, 1, 5), handL = AL.pts[2], handR = AR.pts[2];
