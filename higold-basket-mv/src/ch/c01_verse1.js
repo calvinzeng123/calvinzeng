@@ -333,31 +333,20 @@ function daStamp(x, y, size, age, o = {}) {
 }
 
 // ---- product shot with correct occlusion ----
-// Same framing as the shared productShot(), but the near carcass side and the counter slab are split into small depth-sorted
-// tiles in the basket's layer, so the basket hides behind the carcass when it's inside and shows when it's pulled out.
-function tiled(P, a, b, c, d, nu, nv, fill) {   // quad a→b→c→d, split nu × nv, fills only (no seams: tiles overlap a hair)
-  for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) {
-    const u0 = (i - .03) / nu, u1 = (i + 1.03) / nu, v0 = (j - .03) / nv, v1 = (j + 1.03) / nv;
-    const q = (u, v) => vlerp(vlerp(a, b, u), vlerp(d, c, u), v);
-    P.push({ k: 'face', layer: 1, pts: [q(u0, v0), q(u1, v0), q(u1, v1), q(u0, v1)], fill, ink: null });
-  }
-}
-function edges3(P, pts, n, iw = 2) { for (let e = 0; e < pts.length - 1; e++) for (let i = 0; i < n; i++) P.push({ k: 'face', layer: 1, pts: [vlerp(pts[e], pts[e + 1], i / n), vlerp(pts[e], pts[e + 1], (i + 1) / n)], fill: null, ink: PAL.ink, iw }); }
+// Same framing as the shared productShot(), but the near carcass side and the counter slab go in a layer between the basket (1)
+// and the fronts (2): seen from outside, anything that falls behind them on screen is inside the carcass, so they always win.
+// xray (0..1) turns the near side into a translucent cutaway so the slide + damper stay readable.
 function prodShot(ext, o = {}) {
   const yaw = o.yaw ?? -.6, C = frameCam([0, 150, 230 + ext * .5], yaw, o.pitch ?? .62, o.sx ?? CX, o.sy ?? CY, 760, o.px ?? 900, { fov: o.fov ?? 28 });
   const near = yaw < 0 ? -1 : 1, xs = near * 330, P = [];
   P.push(...boxModel(-330, -20, -20, 330, 400, 460, { sides: near < 0 ? 'rbk' : 'lbk', fill: PAL.paper, sideFill: PAL.paper2, backFill: PAL.paper2 }));
   P.push(...boxModel(-350, 400, -20, 350, 430, 490, { sides: near < 0 ? 'r' : 'l', fill: PAL.paper }));
-  // near carcass side
-  const s0 = [xs, -20, -20], s1 = [xs, -20, 460], s2 = [xs, 400, 460], s3 = [xs, 400, -20];
-  tiled(P, s0, s1, s2, s3, 12, 4, PAL.paper2); edges3(P, [s0, s1, s2, s3, s0], 6);
-  // counter slab: top + front + near end
-  const t0 = [-350, 430, -20], t1 = [350, 430, -20], t2 = [350, 430, 490], t3 = [-350, 430, 490];
-  tiled(P, t0, t1, t2, t3, 8, 10, PAL.paper); edges3(P, [t0, t1, t2, t3, t0], 6, 2.2);
-  const f0 = [-350, 400, 490], f1 = [350, 400, 490];
-  tiled(P, f0, f1, t2, t3, 8, 1, PAL.paper2); edges3(P, [f0, f1], 8, 2.2); edges3(P, [f0, t3], 1); edges3(P, [f1, t2], 1);
-  const ex = near * 350, e0 = [ex, 400, -20], e1 = [ex, 400, 490], e2 = [ex, 430, 490], e3 = [ex, 430, -20];
-  tiled(P, e0, e1, e2, e3, 10, 1, PAL.paper); edges3(P, [e0, e1, e2, e3, e0], 5);
+  const F = (pts, fill, iw = 2) => P.push({ k: 'face', layer: 1.5, pts, fill, ink: PAL.ink, iw });
+  F([[xs, -20, -20], [xs, -20, 460], [xs, 400, 460], [xs, 400, -20]], o.xray ? rgba(PAL.paper2, 1 - o.xray) : PAL.paper2);
+  const ex = near * 350;
+  F([[ex, 400, -20], [ex, 400, 490], [ex, 430, 490], [ex, 430, -20]], PAL.paper);
+  F([[-350, 400, 490], [350, 400, 490], [350, 430, 490], [-350, 430, 490]], PAL.paper2, 2.2);
+  F([[-350, 430, -20], [350, 430, -20], [350, 430, 490], [-350, 430, 490]], PAL.paper, 2.2);
   P.push(...dishDrawer(ext, { items: o.items }));
   render3(P, C, { style: o.style ?? 'steel', shine: o.shine, lw: o.lw });
   return C;
@@ -374,14 +363,15 @@ function sHole(t) {
   let rat = .004 * (1 + Math.sin(t * 43)), shk = [0, 0], hitCO = 0;
   if (!opened && t >= BT(0)) { const n = beatN(t), sb = t - BT(n), amp = n === 0 ? .6 : 1; hitCO = amp * Math.exp(-sb * 3.2); rat += amp * .075 * Math.exp(-sb * 5.5) * Math.abs(Math.sin(sb * 31)); shk = shake(t, 8 * amp * Math.exp(-sb * 7), 3); }
   const glide = E.soft(o / 1.7), push = E.io(clamp(o / 4.6));
-  const pre = E.io(clamp(t / T_OPEN)), sx = lerp(CX, 1325, glide) + shk[0], sy = lerp(532, 566, glide) + shk[1], px = lerp(lerp(560, 612, pre), 612, glide) + 40 * push;
+  const hit = t > 4.9 ? pulse(t, 5) : 0, pre = E.io(clamp(t / T_OPEN)), sx = lerp(CX, 1325, glide) + shk[0], sy = lerp(532, 566, glide) + shk[1];
+  const px = (lerp(lerp(560, 612, pre), 612, glide) + 40 * push) * (1 + .025 * hit);
   const C = frameCam([0, 420, 0], -.05 * glide + .012 * Math.sin(t * .7), .1 + .03 * push, sx, sy, 840, px, { fov: 30 });
   const door = opened ? 1.6 * spring(o, 1.5, .45) : rat;
   const G = cabGeom(C, { door, hinge: 1 });
   // the hole
   const dc = P2(C, [0, 440, -260]), ow = dist(G.open[0][0], G.open[0][1], G.open[1][0], G.open[1][1]);
-  const hit = t > 4.9 ? pulse(t, 5) : 0, R = ow * .42 * (1 + .05 * hit);
-  const reveal = opened ? E.out5(clamp((o - .05) / .6)) : 0;
+  const R = ow * .42 * (1 + .05 * hit);
+  const reveal = opened ? E.out5(clamp((door - .95) / .6)) : 0;
   const L = { x: dc[0], y: dc[1], mode: 'pinch', R: opened ? R * .98 : 0,
     e: opened ? lerp(110, R * 1.12, reveal) : 70 + 90 * hitCO, k: 1, sw: opened ? .9 + .5 * hit + .25 * Math.sin(t * .9) : .3 + .5 * hitCO };
   warpGrid({ gap: 60, L, a: .075 });
@@ -400,6 +390,11 @@ function sHole(t) {
     cabDoor(C, G);
     gapLine(G.front, leak);
   } else {
+    // whoosh: the free edge's path over the last few frames of the fling
+    if (o < .5) for (const y of [120, 460, 770]) {
+      const pts = []; for (let j = 0; j <= 12; j++) { const oo = Math.max(0, o - j * .018), th = 1.6 * spring(oo, 1.5, .45); pts.push(P2(C, cabGeom(C, { door: th, hinge: 1 }).doorFn([-297, y, 20]))); }
+      inkStroke(pts.reverse(), { w: 5, taper: [.9, .05], wob: .3, seed: 90 + y, a: .7 * (1 - o / .5) });
+    }
     cabDoor(C, G);
     ringLayer(t, dc[0], dc[1], R, ring, true);
   }
@@ -411,7 +406,7 @@ function sHole(t) {
     const tw = measure('一拉就到位', 40, F.serif, 900, 14);
     X.strokeStyle = PAL.ink; X.lineWidth = 3; X.strokeRect(-tw / 2 - 20, -40, tw + 40, 64);
     text('一拉就到位', 7, 8, { size: 40, font: F.serif, weight: 900, align: 'center', track: 14 });
-    text('THE BLACK-HOLE CABINET', 0, 62, { size: 17, font: F.mono, weight: 600, align: 'center', track: 4, col: PAL.ink2 });
+    text('第一章 · 黑洞橱柜', 4, 64, { size: 19, font: F.sans, weight: 700, align: 'center', track: 6, col: PAL.ink2 });
     X.restore();
   }
   if (t >= BT(1) && fadeCO > 0) {
@@ -601,13 +596,16 @@ function sPull(t, lt) {
   const fc = P2(Cg, [0, 170, 460 + ext]);
   const kWarp = t < T_PULL ? .85 + .1 * Math.sin(t * 3) : .95 * (1 - spring(t - T_PULL, 2.2, .3));
   warpGrid({ gap: 60, L: { x: fc[0], y: fc[1], e: 190, R: 0, k: kWarp, sw: .5, mode: 'pinch' }, a: .075 });
-  const fq0 = [[-316, 330, 461], [316, 330, 461], [316, 10, 461], [-316, 10, 461]].map(p => P2(Cg, p));
-  if (pk < .3) darkGlow(fq0, t, (1 - pk / .3) * (.5 + .25 * pulse(t, 4)), { spread: 90, left: 1, right: 1, top: .7, bot: .7, gap: 11 });
   const shine = t > T_PULL + .5 ? lerp(-460, 460, E.io(clamp((t - T_PULL - .5) / 1.3))) : null;
   const C = prodShot(ext, { ...opt, style: 'steel', shine });
   // darkness still leaking round the closed front — gone once it's pulled
   const fq = [[-316, 330, 461 + ext], [316, 330, 461 + ext], [316, 10, 461 + ext], [-316, 10, 461 + ext]].map(p => P2(C, p));
-  if (pk < .25) gapLine(fq, (1 - pk / .25) * (.4 + .3 * pulse(t, 4)));
+  if (pk < .3) {   // the old darkness still leaks round the closed front — until it's pulled
+    const gk = (1 - pk / .3) * (.5 + .25 * pulse(t, 4));
+    X.save(); X.beginPath(); X.rect(0, 0, W, H); X.moveTo(fq[0][0], fq[0][1]); for (const q of fq) X.lineTo(q[0], q[1]); X.closePath(); X.clip('evenodd');
+    darkGlow(fq, t, gk, { spread: 80, left: 1, right: 1, top: .6, bot: .8, gap: 11 });
+    X.restore(); gapLine(fq, gk);
+  }
   // the hand: reaches, grips on 我, yanks on 拉, lets go
   const hp = P2(C, [0, 292, 462 + ext]), tIn = 13.3, tGrip = 14.25;
   if (t > tIn && t < T_PULL + 1.3) {
@@ -656,7 +654,7 @@ function sClose(t, lt) {
   paperBG();
   gridScroll(t);
   const ext = closeExt(t);
-  const C = prodShot(ext, { sx: 1320, sy: 590, px: 880, yaw: lerp(-.98, -.9, E.io(clamp(lt / 2.7))), pitch: .26, style: 'steel', shine: lerp(300, -300, clamp(lt / 2.5)) });
+  const C = prodShot(ext, { xray: .62, sx: 1320, sy: 590, px: 880, yaw: lerp(-.98, -.9, E.io(clamp(lt / 2.7))), pitch: .26, style: 'steel', shine: lerp(300, -300, clamp(lt / 2.5)) });
   const rail = pin(C, [-294, 142, 360]);
   const ck = clamp((t - 18.45) / .7);
   callout(rail[0], rail[1], rail[0] - 90, 996, 'SOFT-CLOSE · 阻尼缓冲', { k: ck, dir: 1, size: 28 });
@@ -680,7 +678,7 @@ function buildShot(v) {
     const pos = gridScroll(t);
     const dir = v.dir, k = dir > 0 ? E.soft(lt / (v.d ?? .55)) : 1 - E.out5(lt / (v.d ?? .24));
     const ext = 420 * k;
-    const C = prodShot(ext, { sx: v.sx ?? 1320, sy: v.sy ?? 590, px: v.px, yaw: v.yaw + lt * (v.drift ?? .05), pitch: v.pitch, style: 'steel', shine: lerp(-400, 400, clamp(lt / .6)) });
+    const C = prodShot(ext, { xray: v.xray, sx: v.sx ?? 1320, sy: v.sy ?? 590, px: v.px, yaw: v.yaw + lt * (v.drift ?? .05), pitch: v.pitch, style: 'steel', shine: lerp(-400, 400, clamp(lt / .6)) });
     if (dir < 0) { const fc = pin(C, [0, 190, 461 + ext]); daStamp(fc[0], fc[1], v.ds ?? 180, lt - (v.d ?? .24) + .03, { rot: v.rot ?? -.1 }); }
     // speed streaks grow as the build accelerates (they travel left with the grid)
     const sp = clamp((t - 21.2) / 1.7);
@@ -703,7 +701,7 @@ chapter('verse1', 0, 23.0, [
   [BT(24), sFace],
   [17.9, sClose],
   [BT(30), buildShot({ dir: 1, d: .6, px: 820, yaw: -.5, pitch: .44 })],
-  [BT(32), buildShot({ dir: -1, d: .2, px: 900, yaw: -1.0, pitch: .2, sx: 1330, ds: 200 })],
+  [BT(32), buildShot({ dir: -1, d: .2, px: 900, yaw: -1.0, pitch: .2, sx: 1330, ds: 200, xray: .6 })],
   [BT(32.5), buildShot({ dir: 1, d: .28, px: 700, yaw: -.25, pitch: .95, sx: 1340, sy: 610 })],
   [BT(33), buildShot({ dir: -1, d: .12, px: 1000, yaw: -.3, pitch: .3, sx: 1360, sy: 620, ds: 240, rot: .08 })],
 ]);
