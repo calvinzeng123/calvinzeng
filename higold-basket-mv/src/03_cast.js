@@ -36,6 +36,14 @@ const KP = {
   shrug: pose({ sL: .6, eL: -1.3, sR: .6, eR: -1.3, head: .2, hL: .1, hR: .1 }),
   thumb: pose({ sR: 1.2, eR: 1.3, sL: .2, eL: .2, hL: .1, hR: .12, head: -.08 }),
   frame: pose({ sL: 1.75, eL: 1.4, sR: 1.75, eR: 1.4, hL: .14, hR: .14 }),                         // hands framing the face
+  // --- v2 cheer vocabulary ---
+  highV: pose({ dy: .15, sL: 2.35, eL: 0, sR: 2.35, eR: 0, hL: .12, hR: .12, head: -.05 }),       // arms in a high V
+  lowV: pose({ sL: .62, eL: 0, sR: .62, eR: 0, hL: .12, hR: .12 }),                                 // arms in a low V
+  tee: pose({ sL: 1.57, eL: 0, sR: 1.57, eR: 0, hL: .12, hR: .12 }),                                // T
+  clapUp: pose({ dy: .1, sL: 2.55, eL: .55, sR: 2.55, eR: .55, hL: .14, hR: .14, head: -.1 }),     // hands together overhead
+  kickR: pose({ dy: .2, lean: -.12, sL: 2.3, eL: 0, sR: 2.3, eR: 0, hL: .05, kL: .05, hR: 1.55, kR: 0, head: -.08 }),   // high kick (screen-right leg)
+  pumpR: pose({ lean: -.06, sR: 2.7, eR: .2, sL: .9, eL: -1.9, hL: .16, hR: .2, kR: .15, head: .1 }), // fist pump
+  countR: pose({ lean: .06, sR: 1.2, eR: -.2, sL: .9, eL: -1.9, hL: .12, hR: .2, head: .08 }),       // point forward, counting
 };
 
 // ---------- moves: beat-synced pose generators ----------
@@ -61,6 +69,11 @@ function move(name, t, seed = 0) {
     case 'run': { const s = Math.sin(t * 14 + seed); P = pose({ lean: .12, hL: .3 + .5 * s, kL: .9 * Math.max(0, s) + .2, hR: .3 - .5 * s, kR: .9 * Math.max(0, -s) + .2, sL: .6 - .7 * s, eL: 1.2, sR: .6 + .7 * s, eR: 1.2, dy: .15 * Math.abs(Math.cos(t * 14 + seed)) }); break; }
     case 'shrug': P = lerpPose(KP.stand, KP.shrug, Math.abs(Math.sin(b * Math.PI / 2))); break;
     case 'pointDown': P = hitMix(KP.hips, n % 2 ? KP.pointDown : mirrorPose(KP.pointDown), ph); break;
+    case 'cheer': P = hitMix(n % 2 ? KP.highV : KP.lowV, n % 2 ? KP.lowV : KP.highV, ph); if (n % 4 === 3) P = hitMix(KP.lowV, KP.tee, ph); break;   // V up / V down, T on beat 4
+    case 'clap': P = lerpPose(KP.clapUp, pose({ ...KP.clapUp, sL: 2.25, eL: .1, sR: 2.25, eR: .1, dy: 0 }), 1 - pulse(t, 7)); break;
+    case 'kick': { const c = n % 4; const K = c === 1 ? KP.kickR : c === 3 ? mirrorPose(KP.kickR) : KP.highV; P = hitMix(KP.lowV, K, ph); break; }
+    case 'pump': P = hitMix(KP.hips, n % 2 ? KP.pumpR : mirrorPose(KP.pumpR), ph); break;
+    case 'count': P = hitMix(KP.hips, n % 2 ? KP.countR : mirrorPose(KP.countR), ph); break;
     default: P = KP[name] ? { ...KP[name] } : pose();
   }
   return P;

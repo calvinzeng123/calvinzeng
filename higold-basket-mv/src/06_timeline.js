@@ -6,11 +6,11 @@ const CH = [];
 function chapter(name, start, end, shots, o = {}) { CH.push({ name, start, end, shots, ...o }); CH.sort((a, b) => a.start - b.start); }
 
 // Chapter boundaries that get the pull transition. dir: 1 = new scene enters from the right, -1 from the left, 2 = from the bottom.
-const PULLS = [
-  { t: 23.0, dur: .5, dir: 1 }, { t: 38.5, dur: .55, dir: -1 }, { t: 59.0, dur: .5, dir: 1 }, { t: 73.0, dur: .55, dir: -1 },
-  { t: 95.4, dur: .6, dir: 2 }, { t: 109.4, dur: .5, dir: 1 }, { t: 123.5, dur: .5, dir: -1 }, { t: 135.9, dur: .6, dir: 2 },
+const PULLS = [   // v2: the pull only at section changes; chorus halves (c03→c04, c06→c07, c09→c10) are hard cuts on the beat
+  { t: 13.649, dur: .45, dir: 1 }, { t: 28.423, dur: .45, dir: -1 }, { t: 60.848, dur: .45, dir: 2 },
+  { t: 75.052, dur: .45, dir: 1 }, { t: 106.812, dur: .45, dir: -1 }, { t: 119.419, dur: .45, dir: 1 },
 ];
-const PULL_LEAD = .16;     // the pull starts this long before the boundary so the reveal lands on the downbeat
+const PULL_LEAD = .12;     // the pull starts this long before the boundary so the reveal lands on the downbeat
 
 let DARK = false;          // a shot sets DARK = true when its frame is mostly night; the grain pass switches to light grain
 function shotAt(t) {
