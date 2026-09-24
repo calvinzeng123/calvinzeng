@@ -42,7 +42,7 @@ const KP = {
 // move(name, t, seed) → pose. Hits snap (out5) onto the beat and hold, K-pop style.
 function hitMix(a, b, ph) { return lerpPose(a, b, E.out5(ph / .45)); }
 function move(name, t, seed = 0) {
-  const b = bp(t) + (seed % 2 ? 0 : 0), n = Math.floor(b), ph = b - n, alt = (Math.floor(n / 8) + seed) % 2 === 1;
+  const b = bp(t), n = Math.floor(b), ph = b - n, alt = (Math.floor(n / 8) + seed) % 2 === 1;
   let P;
   switch (name) {
     case 'idle': P = pose({ dy: .06 * Math.sin(t * 2.2 + seed), sL: .2, sR: .2, head: .04 * Math.sin(t * 1.3 + seed) }); break;
@@ -96,10 +96,11 @@ function figure(x, y, s, P, o = {}) {
   const arm = (sa, ea, side, sd) => {
     const a1 = lean + sa * side, a2 = lean + (sa + ea) * side;
     const ex = shx + Math.sin(a1) * ua, ey = shy + Math.cos(a1) * ua, hx2 = ex + Math.sin(a2) * fa, hy2 = ey + Math.cos(a2) * fa;
-    st([[shx, shy], [ex, ey], [hx2, hy2]], sd, lw * .95, [.05, .25]);
-    return [hx2, hy2];
+    return { pts: [[shx, shy], [ex, ey], [hx2, hy2]], sd, up: hy2 < shy - .6 * U || ey < shy - .9 * U };
   };
-  const handL = arm(P.sL, P.eL, -1, 4), handR = arm(P.sR, P.eR, 1, 5);
+  // raised arms are drawn AFTER the head so the head's paper fill never swallows them
+  const AL = arm(P.sL, P.eL, -1, 4), AR = arm(P.sR, P.eR, 1, 5), handL = AL.pts[2], handR = AR.pts[2];
+  for (const A of [AL, AR]) if (!A.up) st(A.pts, A.sd, lw * .95, [.05, .25]);
   // hair behind the head (ponytail / long hair) — swings with lean + beat
   const swing = Math.sin(T * 5 + seed) * .12 + lean * 1.4 - (o.vx ?? 0) * .02;
   if (HAIR[who] === 'pony') { const bx = hcx + Math.sin(headA) * headR * .9, by = hcy - headR * .95; st([[bx, by], [bx + (1.1 + swing) * U * .9, by + .6 * U], [bx + (1.5 + swing * 2) * U * .8, by + 1.8 * U]], 9, lw * 1.6, [.1, .6]); }
@@ -138,6 +139,7 @@ function figure(x, y, s, P, o = {}) {
   // LAN's signal-orange hair clip
   if (who === 'lan') { X.save(); X.translate(.62 * headR, -.62 * headR); X.rotate(-.6); X.fillStyle = PAL.orange; X.beginPath(); X.roundRect(-.28 * headR, -.08 * headR, .56 * headR, .16 * headR, .08 * headR); X.fill(); X.restore(); }
   X.restore();
+  for (const A of [AL, AR]) if (A.up) st(A.pts, A.sd, lw * .95, [.05, .25]);
   X.restore();
   return { head: [hcx, hcy, headR], handL, handR, hip: [hx, hy], neck: [nx, ny] };
 }

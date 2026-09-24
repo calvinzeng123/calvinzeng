@@ -1,7 +1,7 @@
 // c07_bridge.js — Bridge · "The kitchen singularity" (109.4 – 123.5) · night + cosmos
 // The acceleration concept reaches its singularity, drawn as glowing line art on night paper:
-//   A  109.4   a logarithmic spiral of drawers pulls open one by one (each pull reveals the next), accelerating
-//   B  112.008 the same spiral from a raking angle: the cascade goes to 16ths and 32nds
+//   A  109.4   a two-armed golden spiral of drawers pulls open one per sung character (each pull reveals the next, bigger one)
+//   B  112.008 raking orbit: the cascade goes to 16ths, the spin accelerates and the spiral turns edge-on into a column
 //   C  113.372 LAN yanks one drawer and a barred-spiral galaxy unfurls out of it (the bar IS a basket, plates are planets)
 //   D  115.417 Droste: a basket inside a basket inside a basket (exact self-similar exponential zoom, seamless)
 //   E  116.781 reverse explosion: everything flies home into its exact slot and locks in on the 16ths
@@ -59,11 +59,11 @@ const shiftZ = (prims, dz) => dz ? prims.map(p => ({ ...p, pts: p.pts.map(q => [
 
 // the wall/floor junction behind a cabinet, extended along x: a 3D-consistent ground line
 function groundLine(C, o = {}) {
-  const a = pin(C, [-(o.len ?? 2600), -20, -20]), b = pin(C, [o.len ?? 2600, -20, -20]);
+  const a = pin(C, [o.x0 ?? -(o.len ?? 2600), -20, -20]), b = pin(C, [o.x1 ?? (o.len ?? 2600), -20, -20]);
   handLine(a[0], a[1], b[0], b[1], { w: o.w ?? 2.2, col: o.col ?? PAL.steel1, seed: o.seed ?? 707 });
 }
 
-// ---------- shared: one cabinet cell (carcass + dish basket + front), local mm, front plane at z = UD ----------
+// ---------- shared: one drawer cell (dish basket + front), local mm, front plane at z = UD ----------
 const UW = 620, UH = 330, UD = 460;
 const PLATE_S = PROF.plate.map(([r, y]) => [r * .78, y * .78]);
 let _ubk = null;
@@ -75,16 +75,6 @@ function frontFaces(x0, y0, x1, y1, z, o = {}) {
     { k: 'face', layer: 2, bias: -18, pts: [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]], fill: o.fill ?? PAL.night2, iw: o.iw ?? 2 },
     { k: 'face', layer: 2, bias: -40, pts: [[-hw, y1 - 50, z + 1], [hw, y1 - 50, z + 1], [hw, y1 - 38, z + 1], [-hw, y1 - 38, z + 1]], fill: o.handle ?? PAL.steel2, iw: .6 },
   ];
-}
-function unitPrims(ext, o = {}) {
-  const P = [...boxModel(-UW / 2, 0, 0, UW / 2, UH, UD, { sides: 'lrtbk', fill: PAL.night, iw: 1.2 })];
-  for (const p of unitBasket()) { if (p.pts.every(q => q[2] + ext < UD - 6)) continue; P.push(ext ? { ...p, pts: p.pts.map(q => [q[0], q[1], q[2] + ext]) } : p); }
-  if (o.items !== false) {
-    for (let k = 0; k < 3; k++) { const z = 110 + k * 60 + ext; if (z > UD - 20) P.push(lathe([-110, 180, z], PLATE_S, { axis: 'z' })); }
-    if (150 + ext > UD - 40) P.push(lathe([150, 74, 150 + ext], PROF.bowl, { open: true }));
-  }
-  P.push(...frontFaces(-UW / 2 + 5, 6, UW / 2 - 5, UH - 6, UD + ext, o));
-  return P;
 }
 
 // ---------- private presenters ----------
@@ -204,12 +194,14 @@ function spiralDrawers(t, C, spin) {   // two arms (like the galaxy to come); ar
   }
 }
 function spiralCam(t, alt) {
-  const f = frontier(t), span = (alt ? 2.5 : 2.3) * spR(Math.min(SPN, f + .7)) + 150;
-  return alt ? frameCam([0, 0, 0], .7 + (t - T_B) * .2, .4, 1240, 545, span, 1000, { fov: 34, roll: -.1 })
-    : frameCam([0, 0, 0], .5 + (t - 109.4) * .03, .28, 1250, 545, span, 1000, { fov: 34 });
+  const f = frontier(t);
+  if (!alt) return frameCam([0, 0, 0], .5 + (t - 109.4) * .03, .28, 1250, 545, 2.3 * spR(Math.min(SPN, f + .7)) + 150, 1000, { fov: 34 });
+  // B: raking orbit that accelerates, then a push into the spiral's eye just before the galaxy
+  const u = clamp((t - T_B) / (T_GAL - T_B)), dive = Math.pow(.6, E.in(clamp((t - T_GAL + .45) / .45)));
+  return frameCam([0, 0, 0], 1.0 + .4 * E.in(u), .6 - .12 * E.in(u), 1250, 560, (2.2 * spR(Math.min(SPN, f + .7)) + 150) * dive, 1000, { fov: 34, roll: -.2 - .2 * E.in(u) });
 }
 // the spiral turns, and in B the spin accelerates into the cut (the whirl before the galaxy)
-const spiralSpin = t => -(t - 109.4) * .2 - 2.2 * E.in(clamp((t - T_B) / (T_GAL - T_B)));
+const spiralSpin = t => -(t - 109.4) * .2 - 3.2 * E.in(clamp((t - T_B) / (T_GAL - T_B)));
 function shotSpiral(alt) {
   return (t, lt) => {
     const f = frontier(t), C = spiralCam(t, alt);
@@ -223,8 +215,9 @@ function shotSpiral(alt) {
     sparkle(e[0], e[1], 18 + 8 * pulse(t, 5), { col: PAL.shine });
     lyDrawers(34, t, { x: 104, y: 330, cell: 146, hi: '拉' });
     // HUD: open-drawer counter (a joke readout, not a product claim)
-    text('DRAWERS OPEN', W - 64, 70, { size: 18, font: F.mono, weight: 600, col: PAL.steel1, align: 'right', track: 2 });
-    text(String(Math.round(f)).padStart(2, '0') + ' / ∞', W - 64, 108, { size: 30, font: F.mono, weight: 700, col: PAL.paper, align: 'right' });
+    metaStrip(t, { col: PAL.paper, a: .55, tl: 'BRIDGE  ·  THE KITCHEN SINGULARITY' });
+    text('DRAWERS OPEN', W - 64, H - 104, { size: 18, font: F.mono, weight: 600, col: PAL.steel1, align: 'right', track: 2 });
+    text(String(Math.round(f)).padStart(2, '0') + ' / ∞', W - 64, H - 62, { size: 32, font: F.mono, weight: 700, col: PAL.paper, align: 'right' });
   };
 }
 
@@ -324,7 +317,7 @@ function shotGalaxy(t, lt) {
   galaxy(G, t);
   // the stream that joins the drawer to the galaxy while it unfurls
   if (gk > 0 && gk < 1) { X.beginPath(); X.moveTo(bIn[0], bIn[1]); X.quadraticCurveTo(bIn[0] - 60, lerp(bIn[1], G.y, .6), G.x, G.y); glowStroke(4, (1 - gk) * .9, PAL.shine, 6, .25); }
-  groundLine(C);
+  groundLine(C, { len: 1500 });
   const prims = cabinetPrims(ext, { handle: kp > 0 && kp < 1.4 ? PAL.orange : PAL.steel2 });
   render3(prims, C, { style: 'glow', dark: true });
   // light leaking round the closed drawer (the black-hole cabinet of verse 1, reversed)
@@ -508,7 +501,7 @@ function shotHorizon(t, lt) {
   text('拉篮 ×', 104, 990, { size: 30, font: F.sans, weight: 700, col: PAL.steel1 });
   text(J > 1000 ? '∞' : String(cnt), 214, 992, { size: 42, font: F.mono, weight: 800, col: PAL.paper });
   // lyric: one big line in the clear sky above the vanishing point
-  const L = LY[38], env = lyEnv(38, t, .3, .2);
+  const L = LY[38], env = lyEnv(38, t, .5, .2);
   if (env > 0) { LYRIC_DRAWN.add(38); X.save(); X.globalAlpha *= env; lySlamRow(L, t, 100, 300, 190, '拉'); X.restore(); }
 }
 function lySlamRow(L, t, x0, y, sz, hi) {
@@ -538,11 +531,11 @@ function shotSteady(t, lt) {
   galaxy({ x: 1440, y: 230, R: 330, spin: -(tt - T_GAL) * .3, ci: .5, pa: -.2, grow: 1, a: .5 }, t);
   const ext = 380 * E.soft(clamp((t - T_STEADY) / (T_STOP - T_STEADY)));
   const C = frameCam([0, 150, 250], -.66 + m * .1, .36 - m * .04, 1330, 590, 760, 560 + m * 70, { fov: 28 });
-  groundLine(C, { col: PAL.steel0, seed: 909 });
+  groundLine(C, { col: PAL.steel0, seed: 909, x0: -1000, x1: 1150 });
   render3(cabinetPrims(ext, { handle: t >= T_STOP ? PAL.orange : PAL.steel2 }), C, { style: 'glow', dark: true });
   // LAN, calm, hands on hips beside the drawer (figurine scale); she stops with everything else
   const lf = C.project([-600, -20, 330]), lp = lerpPose(move('idle', tt, 3), KP.hips, .85);
-  figure(lf[0], lf[1], lf[3] * 36, lp, { who: 'lan', col: PAL.paper, dark: true, face: t >= T_STOP ? 'closed' : 'smile', blush: 1, shadow: false });
+  figure(lf[0], lf[1], lf[3] * 27, lp, { who: 'lan', col: PAL.paper, dark: true, face: t >= T_STOP ? 'closed' : 'smile', blush: 1, shadow: false });
   // the damping trace: the soft-close curve drawing itself, flat at the downbeat
   const gx = 110, gy = 870, gw = 520, gh = 90, pk = clamp((t - T_STEADY) / (T_STOP - T_STEADY));
   X.save(); X.globalAlpha *= clamp(lt / .4);
@@ -552,6 +545,7 @@ function shotSteady(t, lt) {
   const dot = [gx + pk * gw, gy - E.soft(pk) * gh]; circle(dot[0], dot[1], 6, { fill: t >= T_STOP ? PAL.orange : PAL.paper });
   text('SOFT-CLOSE  阻尼缓冲', gx, gy + 40, { size: 20, font: F.mono, weight: 600, col: PAL.steel1, track: 2 });
   X.restore();
+  metaStrip(t, { col: PAL.paper, a: .5, tl: 'BRIDGE  ·  SETTLE', br: 'CH.07  ·  THE KITCHEN SINGULARITY' });
   // 2 × 2 block of steady type: each character slides out of its slot like a drawer and settles (no bounce)
   const L = LY[39], env = lyEnv(39, t, .5, .2);
   if (env > 0) {

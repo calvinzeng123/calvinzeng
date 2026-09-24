@@ -38,7 +38,7 @@ function warpGrid(o = {}) {
     for (let i = 0; i <= n; i++) {
       const u = i / n, px = lerp(x1, x2, u), py = lerp(y1, y2, u), q = L ? lensPt(px, py, L) : [px, py, 1e9];
       if (prev && q[2] > hide && prev[2] > hide && Math.abs(q[0] - prev[0]) + Math.abs(q[1] - prev[1]) < step * 6) {
-        const b = L ? Math.min(NB - 1, Math.floor(clamp(1.7 * L.e * Math.abs(L.k) / Math.max(1, (q[2] + prev[2]) / 2)) * NB)) : 0;
+        const b = L ? Math.min(NB - 1, Math.floor(clamp(1.5 * Math.pow(L.e * Math.abs(L.k) / Math.max(1, (q[2] + prev[2]) / 2), 1.6)) * NB)) : 0;
         const P = paths[b + (maj ? NB : 0)]; if (b !== pb) P.moveTo(prev[0], prev[1]); P.lineTo(q[0], q[1]); pb = b;
       } else pb = -1;
       prev = q;
@@ -50,7 +50,7 @@ function warpGrid(o = {}) {
   X.save(); X.strokeStyle = col; X.lineCap = 'round'; X.lineJoin = 'round';
   for (let b = 0; b < NB * 2; b++) {
     const bb = b % NB, maj = b >= NB;
-    X.globalAlpha = clamp(a0 * (1 + bb * 1.25) * (maj ? 1.7 : 1)) * (o.fade ?? 1); X.lineWidth = (maj ? 1.5 : 1.1) + bb * .45; X.stroke(paths[b]);
+    X.globalAlpha = clamp(a0 * (1 + bb * 1.1) * (maj ? 1.6 : 1)) * (o.fade ?? 1); X.lineWidth = (maj ? 1.5 : 1.1) + bb * .4; X.stroke(paths[b]);
   }
   X.restore();
 }
@@ -213,6 +213,15 @@ function ringLayer(t, cx, cy, R, o, front) {
       flush();
     }
   });
+  // the accretion band: a paper ribbon with ink edges — reads bright where it crosses the black disc
+  const r0 = o.band0 ?? 1.36, r1 = o.band1 ?? 1.78, a0 = front ? 0 : Math.PI, a1 = a0 + Math.PI, bo = [], bi = [];
+  for (let i = 0; i <= 48; i++) { const ph = lerp(a0, a1, i / 48); bo.push(ringPos(cx, cy, R, r1, ph, o)); bi.push(ringPos(cx, cy, R, r0, ph, o)); }
+  fillPoly([...bo, ...bi.slice().reverse()], PAL.paper);
+  pline(bo, 2.6, PAL.ink, false, 1, 31); pline(bi, 2.2, PAL.ink, false, 1, 32);
+  for (let j = 0; j < 2; j++) {   // flow dashes inside the band
+    const rf = lerp(r0, r1, .33 + j * .34);
+    for (let d = 0; d < 5; d++) { const p0 = d * TAU / 5 + om(rf) * t * 1.4 + j, run = []; for (let i = 0; i <= 10; i++) { const ph = p0 + .55 * i / 10; if (isF(ph) === front) run.push(ringPos(cx, cy, R, rf, ph, o)); } if (run.length > 2) inkStroke(run, { w: 2, taper: [.7, .1], wob: .2, seed: 33 + d + j * 7, a: .7 }); }
+  }
   // faint orbit guides
   for (const rf of [1.46, 2.34, 3.1]) { const pts = []; for (let i = 0; i <= 60; i++) { const ph = front ? Math.PI * i / 60 : Math.PI + Math.PI * i / 60; pts.push(ringPos(cx, cy, R, rf, ph, o)); } pline(pts, 1.3, PAL.ink, false, .32, rf * 10); }
   // dust
@@ -236,13 +245,15 @@ function ringLayer(t, cx, cy, R, o, front) {
 function blackDisc(cx, cy, R, o = {}) {
   circle(cx, cy, R, { fill: PAL.ink });
   handCircle(cx, cy, R + 2.5, { w: 3.5, seed: 77 });
-  // lensed far side of the disk: arcs hugging the top (Gargantua-style), thinner ones under
+  // lensed far side of the disk: a paper crescent hugging the top (Gargantua-style) and a thin one under
   const tilt = o.tilt ?? -.16, k = o.k ?? 1; if (k < .01) return;
-  for (let i = 0; i < 3; i++) {
-    const rr = R * (1.07 + i * .075), a0 = Math.PI + .1 + i * .08, a1 = TAU - .1 - i * .08;
-    inkStroke(ell(cx, cy, rr, rr * .93, tilt, a0, a1, 50), { w: (3.4 - i * .9) * k, taper: [.2, .2], wob: .3, seed: 60 + i });
-  }
-  for (let i = 0; i < 2; i++) { const rr = R * (1.05 + i * .05); inkStroke(ell(cx, cy, rr, rr * .7, tilt, .45 + i * .15, Math.PI - .45 - i * .15, 36), { w: (2 - i * .6) * k, taper: [.3, .3], wob: .3, seed: 70 + i }); }
+  const cres = (ri, ro, a0, a1, sy, sd) => {
+    const out = ell(cx, cy, R * ro, R * ro * sy, tilt, a0, a1, 50), inn = ell(cx, cy, R * ri, R * ri * sy, tilt, a0, a1, 50);
+    X.save(); X.globalAlpha *= k; fillPoly([...out, ...inn.slice().reverse()], PAL.paper); X.restore();
+    inkStroke(out, { w: 2.8 * k, taper: [.25, .25], wob: .3, seed: sd }); inkStroke(inn, { w: 1.6 * k, taper: [.3, .3], wob: .3, seed: sd + 1 });
+  };
+  cres(1.035, 1.2, Math.PI + .12, TAU - .12, .96, 60);
+  cres(1.03, 1.1, .5, Math.PI - .5, .8, 70);
 }
 
 // ---- LAN kneeling in profile, facing screen-right, head-first into something; legs kick on 8ths ----
@@ -332,18 +343,18 @@ function sHole(t) {
   let rat = .004 * (1 + Math.sin(t * 43)), shk = [0, 0], hitCO = 0;
   if (!opened && t >= BT(0)) { const n = beatN(t), sb = t - BT(n), amp = n === 0 ? .6 : 1; hitCO = amp * Math.exp(-sb * 3.2); rat += amp * .075 * Math.exp(-sb * 5.5) * Math.abs(Math.sin(sb * 31)); shk = shake(t, 8 * amp * Math.exp(-sb * 7), 3); }
   const glide = E.soft(o / 1.7), push = E.io(clamp(o / 4.6));
-  const sx = lerp(CX, 1325, glide) + shk[0], sy = lerp(532, 566, glide) + shk[1], px = lerp(610, 612, glide) + 40 * push;
+  const pre = E.io(clamp(t / T_OPEN)), sx = lerp(CX, 1325, glide) + shk[0], sy = lerp(532, 566, glide) + shk[1], px = lerp(lerp(560, 612, pre), 612, glide) + 40 * push;
   const C = frameCam([0, 420, 0], -.05 * glide + .012 * Math.sin(t * .7), .1 + .03 * push, sx, sy, 840, px, { fov: 30 });
   const door = opened ? 1.6 * spring(o, 1.5, .45) : rat;
   const G = cabGeom(C, { door, hinge: 1 });
   // the hole
   const dc = P2(C, [0, 440, -260]), ow = dist(G.open[0][0], G.open[0][1], G.open[1][0], G.open[1][1]);
   const hit = t > 4.9 ? pulse(t, 5) : 0, R = ow * .42 * (1 + .05 * hit);
-  const reveal = opened ? E.out5(clamp(o / .7)) : 0;
+  const reveal = opened ? E.out5(clamp((o - .05) / .6)) : 0;
   const L = { x: dc[0], y: dc[1], mode: 'pinch', R: opened ? R * .98 : 0,
     e: opened ? lerp(110, R * 1.12, reveal) : 70 + 90 * hitCO, k: 1, sw: opened ? .9 + .5 * hit + .25 * Math.sin(t * .9) : .3 + .5 * hitCO };
   warpGrid({ gap: 60, L, a: .075 });
-  const ring = { tilt: -.19, flat: .2, spin: 1 + .5 * hit + .3 * push, k: reveal };
+  const ring = { tilt: -.19, flat: .22, spin: 1 + .5 * hit + .3 * push, k: reveal };
   if (opened) {
     cabInterior(C, G, L, reveal);
     ringLayer(t, dc[0], dc[1], R, ring, false);
@@ -367,7 +378,7 @@ function sHole(t) {
     const a = t - BT(0), k = E.out5(clamp(a / .16)), s = lerp(1.7, 1, k);
     X.save(); X.globalAlpha *= clamp(a / .05) * fadeCO; X.translate(CX, 968); X.rotate(-.018); X.scale(s, s);
     const tw = measure('一拉就到位', 40, F.serif, 900, 14);
-    X.strokeStyle = PAL.ink; X.lineWidth = 3; X.strokeRect(-tw / 2 - 28, -40, tw + 42, 64);
+    X.strokeStyle = PAL.ink; X.lineWidth = 3; X.strokeRect(-tw / 2 - 20, -40, tw + 40, 64);
     text('一拉就到位', 7, 8, { size: 40, font: F.serif, weight: 900, align: 'center', track: 14 });
     text('THE BLACK-HOLE CABINET', 0, 62, { size: 17, font: F.mono, weight: 600, align: 'center', track: 4, col: PAL.ink2 });
     X.restore();
@@ -410,7 +421,7 @@ function sSwallow(t, lt) {
   SW2.forEach(([kind, tv, phv, sz], i) => {
     const [x, y, r, ph] = swPos(tv, phv, t, cx, cy, R); if (r > 1300) return;
     const st = 1 + .9 * Math.pow(clamp((2.2 * R - r) / (1.2 * R)), 1.4);
-    ware(kind, x, y, sz * (.55 + .45 * clamp(r / (2.5 * R))), t * (1.2 + hash(i)) + i, { seed: 90 + i, stretch: st, sdir: ph, w: 3.4 });
+    ware(kind, x, y, sz * (.55 + .45 * clamp(r / (2.5 * R))), t * (.5 + hash(i) * .6) + i, { seed: 90 + i, stretch: st, sdir: ph, w: 3.4 });
   });
   // the four sung items: detection box → 404
   SW.forEach(([kind, lab, tt, tv, phv, sz], i) => {
@@ -420,7 +431,7 @@ function sSwallow(t, lt) {
       const fade = clamp((tv - t) / .07);
       const trail = []; for (let j = 0; j <= 12; j++) { const q = swPos(tv, phv, t - j * .03, cx, cy, R); trail.push([q[0], q[1]]); }
       inkStroke(trail.reverse(), { w: 9, taper: [.95, .05], seed: 220 + i, a: .4 * fade });
-      ware(kind, x, y, sc, t * (1.4 + i * .3) * (i % 2 ? -1 : 1) + i * 1.3, { seed: 230 + i, stretch: st, sdir: ph, a: fade, w: 4 });
+      ware(kind, x, y, sc, (t - tt) * (.5 + i * .12) * (i % 2 ? -1 : 1) - .25 + i * .15, { seed: 230 + i, stretch: st, sdir: ph, a: fade, w: 4 });
     }
     if (t >= tt) {
       const bs = alive ? sz * (.6 + .4 * clamp(r / (2.4 * R))) : sz * .6, bw = bs * 2.7, bh = bs * 2.1;
@@ -482,7 +493,7 @@ const BOT = [   // half-width profile [r, y] from the base, and the paper label 
 const BOT_T = LY[3].t.slice(0, 7);   // each bottle starts to fall on a syllable of 调料瓶倒成一片
 const FLOOR_S = 890;
 const botLayout = (() => {
-  const L = []; let x = 448;
+  const L = []; let x = 428;
   BOT.forEach(([pf]) => { const r = Math.max(...pf.map(p => p[0])), h = pf[pf.length - 1][1]; L.push({ x: x + r, r, h, rb: pf[1][0] }); x += 2 * r + h * .38; });
   return L;
 })();

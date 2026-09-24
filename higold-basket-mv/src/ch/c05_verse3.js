@@ -115,7 +115,7 @@ function vcol(i, t, x, y, size, o = {}) {
 // An L-shaped run of base cabinets, the corner countertop lifted off (cut-away model). The blind corner is a black void
 // with two trays trapped in it; the door snaps open and the trays swing out on their pivot post, one after the other.
 // ======================================================================================================
-const KC = { d: 560, h: 780, o0: 560, o1: 1160, r2: 1250, r3: 1720 };
+const KC = { d: 560, h: 780, o0: 560, o1: 1250, r2: 1250, r3: 1800 };
 function cornerTray(y, th, kind) {
   const pv = [KC.o0, 0, KC.o0], off = rotY([-285, 0, -285], th), c = [pv[0] + off[0], y, pv[2] + off[2]];
   let P = translate3(basketModel({ w: 420, d: 420, h: 62, rimR: 150, gap: 30, midRim: false, wire: 2.8, rim: 5 }), [0, 0, -210]);
@@ -136,7 +136,7 @@ function shotCorner(t, lt, dur) {
   const th1 = -Math.PI * E.soft(seg(t, 74.46, 76.1)), th2 = -Math.PI * E.soft(seg(t, 75.14, 76.8));
   const dark = 1 - E.io(seg(t, 75.95, 76.9));
   const pitch = kf(t, [[73.1, 1.2], [74.7, .8], [77.9, .7]], E.io3), yaw = kf(t, [[72.8, .7], [77.9, .42]], E.io);
-  const C = frameCam([820, 360, 640], yaw, pitch, 1255, 600, 2150, 1080 + lt * 14, { fov: 28 });
+  const C = frameCam([860, 360, 640], yaw, pitch, 1255, kf(t, [[72.84, 650], [74.6, 610]], E.io), 2250, lerp(900, 1080, E.io(seg(t, 72.84, 74.8))) + lt * 14, { fov: 28 });
   const ro = { style: 'steel', shine: lerp(-300, 1900, seg(t, 74.4, 77.3)) };
 
   // room: wall/floor junctions of a white cube corner
@@ -175,7 +175,7 @@ function shotCorner(t, lt, dur) {
     front: () => { render3(door, C, ro); },
     out: () => {
       // the countertop over the corner: lifted off and turned into a dashed ghost (exploded axonometric)
-      const ly = lidK * 250, solid = 1 - E.io(seg(lidK, .25, .6));
+      const ly = lidK * 170, solid = 1 - E.io(seg(lidK, .25, .6));
       if (solid > .01) render3(boxN(0, KC.h + ly, 0, KC.o1, KC.h + 40 + ly, KC.d + 20, 'lrtbkf'), C, { a: solid });
       ghostBox(C, 0, KC.h + ly, 0, KC.o1, KC.h + 40 + ly, KC.d + 20, (1 - solid) * .85);
       for (const [x, z] of [[0, 0], [KC.o1, 0], [KC.o1, KC.d + 20], [0, KC.d + 20]]) wline(C, [x, KC.h + 2, z], [x, KC.h + ly, z], { w: 1.2, col: PAL.grey, a: lidK * .8, dash: [4, 7] });
@@ -216,7 +216,7 @@ function shotPantry(t, lt, dur) {
   const wide = 1 - orb, drift = seg(t, 77.2, 78.6);
   const ay = lerp(lerp(1720, 430, crane), 1120, wide) + back * 330, span = lerp(lerp(1450, 1520, crane), 2500 - drift * 180, wide) + back * 480;
   const yaw = lerp(-1.08, -.46 - drift * .06, wide) - seg(t, 79.6, 81.9) * .08, pitch = lerp(lerp(.3, .4, crane), .16, wide) - back * .1;
-  const C = frameCam([0, ay, lerp(330, 560, orb)], yaw, pitch, 1190, 540, span, 1000, { fov: 30 });
+  const C = frameCam([0, ay, lerp(330, 560, orb)], yaw, pitch, 1120, 540, span, 1000, { fov: 30 });
   const ro = { style: 'steel', shine: lerp(-200, 1300, seg(t, 78.7, 80.9)) };
 
   // room: floor and ceiling lines (floor-to-ceiling), back wall edge
@@ -224,7 +224,7 @@ function shotPantry(t, lt, dur) {
   wline(C, [-PT.w / 2, 0, 0], [-PT.w / 2 - 900, 0, 0], { w: 1.5, col: PAL.ink2, a: .55 }); wline(C, [-PT.w / 2, 2250, 0], [-PT.w / 2 - 900, 2250, 0], { w: 1.5, col: PAL.ink2, a: .55 });
   wfill(C, [[-PT.w / 2 - 30, 0, 0], [PT.w / 2, 0, 0], [PT.w / 2, 0, PT.d + 40 + ext], [-PT.w / 2 - 30, 0, PT.d + 60 + ext]], PAL.ink, .06);
 
-  const shell = boxN(-PT.w / 2, 0, 0, PT.w / 2, PT.h, PT.d, 'klrtb', { closed: false });
+  const shell = boxN(-PT.w / 2, 0, 0, PT.w / 2, PT.h, PT.d, 'klrtb', { closed: false }).map(f => f.n[0] === -1 ? { ...f, fill: PAL.paper2 } : f);
   const dz = PT.d + 20 + ext;
   const door = [...doorModel(-PT.w / 2 + 2, 16, PT.w / 2 - 2, PT.h - 16, dz, { th: 22, handle: false }),
     { k: 'face', layer: 2, bias: -30, pts: [[-PT.w / 2 + 1, 880, dz - 4], [-PT.w / 2 + 1, 880, dz - 16], [-PT.w / 2 + 1, 1380, dz - 16], [-PT.w / 2 + 1, 1380, dz - 4]], fill: PAL.ink2, ink: PAL.ink, iw: 1 }];
@@ -245,7 +245,7 @@ function shotPantry(t, lt, dur) {
   if (dk > 0 && da > 0) {
     const dx = PT.w / 2 + 170, dz = PT.d + 20, top = lerp(0, 2250, dk);
     wline(C, [PT.w / 2 + 20, 0, dz], [dx + 40, 0, dz], { w: 1.2, col: PAL.ink2, a: da }); wline(C, [PT.w / 2 + 20, 2250, dz], [dx + 40, 2250, dz], { w: 1.2, col: PAL.ink2, a: da * dk });
-    const s1 = wpath(C, [[dx, 0, dz], [dx, top, dz]], { w: 2.5, a: da }); X.save(); X.globalAlpha *= da; headAt(s1, PAL.ink, 16, 2.5); headAt([s1[1], s1[0]], PAL.ink, 16, 2.5); X.restore();
+    const s1 = wpath(C, [[dx, 0, dz], [dx, top, dz]], { w: 2.5, a: da }); if (dk > .06) { X.save(); X.globalAlpha *= da * seg(dk, .06, .2); headAt(s1, PAL.ink, 16, 2.5); headAt([s1[1], s1[0]], PAL.ink, 16, 2.5); X.restore(); }
     const m = P2(C, [dx, 1125, dz]); text('通高', m[0] + 18, m[1] + 12, { size: 34, font: F.serif, weight: 900, a: da * seg(dk, .5, .9) });
     text('floor to ceiling', m[0] + 18, m[1] + 48, { size: 26, font: F.serifI, col: PAL.ink2, a: da * seg(dk, .5, .9) });
   }
@@ -395,12 +395,24 @@ function statue(t, o = {}) {
   const gy = MU.py - 8, cw = 156, ch = 168, bx = 1250, bt = gy - ch;
   fillPoly([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4], [1080, gy - 4]], PAL.paper2);
   inkStroke([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4]], { w: 1.8, col: PAL.ink2, seed: 88, taper: [.01, .01] });
-  const st = (pts, sd, w = 6.5) => inkStroke(pts, { w, seed: 700 + sd, taper: [.08, .12], wob: .4, press: .15 });
-  // far leg, near leg: shins flat on the plinth with curled toes, thighs up to a round, proud bottom (the highest point);
-  // the back slopes down into the cabinet
-  st([[bx - 152, gy - 15], [bx - 146, gy - 4], [bx - 84, gy - 4], [bx - 80, gy - 70]], 1, 6);
-  st([[bx - 170, gy - 17], [bx - 163, gy - 5], [bx - 100, gy - 5], [bx - 96, gy - 72]], 2, 7);
-  st([[bx - 96, gy - 72], [bx - 120, gy - 94], [bx - 114, gy - 128], [bx - 84, gy - 138], [bx - 52, gy - 120], [bx - 16, gy - 86], [bx + 24, gy - 64]], 3, 8);
+  // plaster cast: thick tube limbs, one merged ink outline (ink pass, then paper pass), a little hatching underneath
+  const J = (x, y) => [bx + x + jit(x * 3.1 + y, .6), gy + y + jit(y * 2.7 + x, .6)];
+  const tubes = [
+    [[J(-176, -30), J(-168, -15)], 22],                    // toes
+    [[J(-168, -15), J(-100, -15)], 28],                    // shin flat on the plinth
+    [[J(-100, -15), J(-104, -80)], 34],                    // thigh
+    [[J(-104, -96), J(-40, -94), J(30, -66)], 50],         // back, sloping into the cabinet
+  ];
+  const pass = (col, extra) => {
+    X.save(); X.strokeStyle = col; X.fillStyle = col; X.lineCap = 'round'; X.lineJoin = 'round';
+    for (const [pts, w] of tubes) { X.lineWidth = w + extra; X.beginPath(); pts.forEach((q, i) => i ? X.lineTo(q[0], q[1]) : X.moveTo(q[0], q[1])); X.stroke(); }
+    X.beginPath(); X.arc(bx - 112, gy - 96, 34 + extra / 2, 0, TAU); X.fill();      // the proud bottom
+    X.restore();
+  };
+  pass(PAL.ink, 9); pass(PAL.paper, 0);
+  X.save(); X.globalAlpha *= .45; X.beginPath(); X.moveTo(bx - 146, gy - 80); X.arc(bx - 112, gy - 96, 34, Math.PI * .9, Math.PI * .1, true); X.lineTo(bx + 30, gy - 44); X.lineTo(bx - 60, gy - 70); X.closePath(); X.clip();
+  hatch([[bx - 160, gy - 140], [bx + 40, gy - 140], [bx + 40, gy - 20], [bx - 160, gy - 20]], { gap: 7, w: 1.1, angle: -.8, seed: 9, col: PAL.ink2 }); X.restore();
+  inkStroke([[bx - 132, gy - 118], [bx - 116, gy - 128], [bx - 96, gy - 126]], { w: 2, col: PAL.ink2, seed: 710, a: .6 });
   // the cabinet: dark interior swallowing head and arms, carcass edges, the door swung open
   X.save(); X.beginPath(); X.rect(bx, bt, cw, ch); X.rect(bx + 14, bt + 14, cw - 28, ch - 28); X.fillStyle = PAL.paper; X.fill('evenodd'); X.restore();
   rect(bx + 14, bt + 14, cw - 28, ch - 28, PAL.ink);
