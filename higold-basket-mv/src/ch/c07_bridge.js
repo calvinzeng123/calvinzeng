@@ -57,12 +57,6 @@ function place(prims, o, ex, ey, ez, s) {
 }
 const shiftZ = (prims, dz) => dz ? prims.map(p => ({ ...p, pts: p.pts.map(q => [q[0], q[1], q[2] + dz]) })) : prims;
 
-// the wall/floor junction behind a cabinet, extended along x: a 3D-consistent ground line
-function groundLine(C, o = {}) {
-  const a = pin(C, [o.x0 ?? -(o.len ?? 2600), -20, -20]), b = pin(C, [o.x1 ?? (o.len ?? 2600), -20, -20]);
-  handLine(a[0], a[1], b[0], b[1], { w: o.w ?? 2.2, col: o.col ?? PAL.steel1, seed: o.seed ?? 707 });
-}
-
 // ---------- shared: one drawer cell (dish basket + front), local mm, front plane at z = UD ----------
 const UW = 620, UH = 330, UD = 460;
 const PLATE_S = PROF.plate.map(([r, y]) => [r * .78, y * .78]);
@@ -116,7 +110,7 @@ function lySlam(i, t, o = {}) {
         if (k > 0) {
           const s = lerp(1.3, 1, E.out5(k)), dy = (1 - E.out5(k)) * -sz * .15, hot = (o.hi ?? '').includes(c.ch), cx = x + ws[j] / 2, cy = y - sz * .38;
           X.save(); X.translate(cx, cy + dy); X.scale(s, s); X.translate(-cx, -cy);
-          if (pass === 0) text(c.ch, x, y, { size: sz, font, weight: wt, col: null, stroke: PAL.night, sw: sz * (o.moat ?? .16), a: clamp(k * 3) });
+          if (pass === 0) text(c.ch, x, y, { size: sz, font, weight: wt, col: null, stroke: PAL.night, sw: sz * (o.moat ?? .22), a: clamp(k * 3) });
           else text(c.ch, x, y, { size: sz, font, weight: wt, col: hot ? PAL.orange : (o.col ?? PAL.paper), a: clamp(k * 3) });
           X.restore();
         }
@@ -143,7 +137,7 @@ function lyHome(i, t, o = {}) {
         const e = k * k, ox = (hash(sd) - .5) * 900 * (1 - e) + 260 * (1 - e), oy = (hash(sd + 1) - .5) * 700 * (1 - e), rot = (hash(sd + 2) - .5) * 2.4 * (1 - e), sc = lerp(.35, 1, e);
         const cx = x + w / 2, cy = y - sz * .38;
         X.save(); X.translate(cx + ox, cy + oy); X.rotate(rot); X.scale(sc, sc); X.translate(-cx, -cy);
-        text(c.ch, x, y, { size: sz, font, weight: wt, col: null, stroke: PAL.night, sw: sz * .14, a: clamp(k * 2.5) });
+        text(c.ch, x, y, { size: sz, font, weight: wt, col: null, stroke: PAL.night, sw: sz * .2, a: clamp(k * 2.5) });
         text(c.ch, x, y, { size: sz, font, weight: wt, col: hot ? PAL.orange : PAL.paper, a: clamp(k * 2.5) });
         X.restore();
         if (k < 1) { const px = cx + ox * 1.25, py = cy + oy * 1.25; X.beginPath(); X.moveTo(px, py); X.lineTo(cx + ox, cy + oy); glowStroke(2, .5 * clamp(k * 3)); }
@@ -424,7 +418,7 @@ function shotDroste(t, lt) {
   const bpos = (t - T_DRO) / BEAT, u = .62 * bpos + .55 * (Math.floor(Math.max(0, bpos)) + E.out5(frac(Math.max(0, bpos)) / .55)) - .15;
   const Z0 = 1500, fx = 1230, fy = 560, k0 = Math.floor(u);
   for (let k = k0 - 1; k <= k0 + 6; k++) drosteLevel(k - u, Z0, fx, fy, 1);
-  lySlam(36, t, { x: 100, y: 430, size: 150, rowScale: [1, 1.1], hi: '篮', lead: 1.2, moat: .2 });
+  lySlam(36, t, { x: 100, y: 430, size: 150, rowScale: [1, 1.1], hi: '篮', lead: 1.2, moat: .28 });
   text('篮 ⊂ 篮 ⊂ 篮 ⊂ …', 104, 820, { size: 26, font: F.mono, weight: 600, col: PAL.steel1, track: 2 });
 }
 
@@ -479,6 +473,17 @@ function shotHome(t, lt) {
 // F · drawers to the horizon (越拉越多): a stack runs off to the vanishing point and pulls out in an exponential wave
 // =====================================================================================================================
 const HC = 600, HR = 4, HRH = 320, HDEP = 560, HEXT = 540;
+// faint floor grid below the horizon (world y = 0), shared by F and G
+function floorGrid(C, hy) {
+  X.save(); X.beginPath(); X.rect(0, hy, W, H - hy); X.clip();
+  X.beginPath();
+  for (let m = -14; m <= 2; m++) { const a = C.project([m * 600, 0, 4000]), b = C.project([m * 600, 0, -6e5]); if (a[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
+  glowStroke(1, .2);
+  X.beginPath();
+  for (let j = -6; j < 70; j++) { const z = -j * j * 60 - j * 600; const a = C.project([-12000, 0, z]), b = C.project([HDEP, 0, z]); if (a[2] > 5 && b[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
+  glowStroke(1, .14);
+  X.restore();
+}
 // the drawer stack: columns j (z from −j·HC), HR rows; extOf(j, r) = how far each drawer is out; js = painter order (far first)
 function drawStack(C, eye, js, extOf, o = {}) {
   const P3 = (x, y, z) => C.project([x, y, z]), poly4 = q => { X.beginPath(); q.forEach((p, m) => m ? X.lineTo(p[0], p[1]) : X.moveTo(p[0], p[1])); X.closePath(); };
@@ -530,15 +535,7 @@ function shotHorizon(t, lt) {
   const C = camera3({ eye, at: vadd(eye, [Math.sin(ya) * 1e4, Math.tan(tl) * 1e4, -Math.cos(ya) * 1e4]), fov: 42, cx: 1330, cy: 520 });
   const vp = C.project(vadd(eye, [0, 0, -1e9])), hy = vp[1];
   cosmos(t, { dx: -t * 20, clipY: hy - 4 });
-  // floor grid below the horizon
-  X.save(); X.beginPath(); X.rect(0, hy, W, H - hy); X.clip();
-  X.beginPath();
-  for (let m = -14; m <= 2; m++) { const a = C.project([m * 600, 0, 4000]), b = C.project([m * 600, 0, -6e5]); if (a[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
-  glowStroke(1, .2);
-  X.beginPath();
-  for (let j = -6; j < 70; j++) { const z = -j * j * 60 - j * 600; const a = C.project([-12000, 0, z]), b = C.project([HDEP, 0, z]); if (a[2] > 5 && b[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
-  glowStroke(1, .14);
-  X.restore();
+  floorGrid(C, hy);
   X.beginPath(); X.moveTo(0, hy); X.lineTo(W, hy); glowStroke(1.6 + pulse(t, 5) * 1.4, .7 + .3 * pulse(t, 5));   // the horizon ticks on the beat
   // the stack: HR drawers high, running to the vanishing point. Wave front grows exponentially in time (越拉越多).
   const t0 = LY[38].t[0], al = 2.35, J = t < t0 ? -1 : 4 * (Math.exp(al * (t - t0)) - 1), NC = 280;
@@ -561,7 +558,7 @@ function lySlamRow(L, t, x0, y, sz, hi) {
       if (k > 0) {
         const s = lerp(1.35, 1, E.out5(k)), cx = x + w / 2, cy = y - sz * .38;
         X.save(); X.translate(cx, cy - (1 - E.out5(k)) * sz * .15); X.scale(s, s); X.translate(-cx, -cy);
-        if (!pass) text(ch, x, y, { size: sz, font: F.heavy, weight: 900, col: null, stroke: PAL.night, sw: sz * .16, a: clamp(k * 3) });
+        if (!pass) text(ch, x, y, { size: sz, font: F.heavy, weight: 900, col: null, stroke: PAL.night, sw: sz * .22, a: clamp(k * 3) });
         else text(ch, x, y, { size: sz, font: F.heavy, weight: 900, col: hi.includes(ch) ? PAL.orange : PAL.paper, a: clamp(k * 3) });
         X.restore();
       }
@@ -574,37 +571,45 @@ function lySlamRow(L, t, x0, y, sz, hi) {
 // G · 越拉越稳: the bridge resolves on its own world. The drawer wall from F, seen head-on: every drawer glides home on the
 // soft-close curve in a wave that closes in on the centre, the wall goes flush, and camera + stars stop dead on 122.917.
 // =====================================================================================================================
-const closeT = (j, r) => T_STEADY + .08 + 1.1 * (1 - Math.min(1, Math.abs(j - 1) / 10)) + r * .05 + hash(j * 7.1 + r) * .08;
-const steadyExt = (t, j, r) => HEXT * (1 - E.soft((t - closeT(j, r)) / .8));
+// every drawer glides home on the soft-close curve in a wave closing in on the centre (done before the downbeat);
+// the centre drawer (orange handle) is the last one home and slams flush exactly on 122.917, with 稳
+const HOT_J = 2, HOT_R = 2;
+const closeT = (j, r) => T_STEADY + .05 + .95 * (1 - Math.min(1, Math.abs(j - HOT_J) / 12)) + r * .04 + hash(j * 7.1 + r) * .06;
+function steadyExt(t, j, r) {
+  if (j === HOT_J && r === HOT_R) return HEXT * (1 - Math.pow(clamp((t - (T_STOP - .7)) / .7), 2.2));
+  const k = (t - closeT(j, r)) / .75; return k >= .82 ? 0 : HEXT * (1 - E.soft(k));
+}
 function shotSteady(t, lt) {
   const tt = Math.min(t, T_STOP), m = clamp((tt - T_STEADY) / (T_STOP - T_STEADY));   // linear clock that stops dead
-  const eye = [-3150 + m * 380, 1000, 0], a = .2, tl = .052;
-  const C = camera3({ eye, at: vadd(eye, [Math.cos(a) * 1e4, Math.tan(tl) * 1e4, -Math.sin(a) * 1e4]), fov: 40, cx: CX, cy: 540 });
-  const top = C.project([0, HR * HRH, -600])[1];
-  cosmos(t, { dx: -tt * 16, dy: tt * 3, glints: 4, clipY: top + 40 });
-  // columns sorted far → near
-  const js = []; for (let j = -16; j <= 60; j++) js.push(j);
+  const eye = [-4300 + m * 420, 900, 1500], a = .34, tl = .03;
+  const C = camera3({ eye, at: vadd(eye, [Math.cos(a) * 1e4, Math.tan(tl) * 1e4, -Math.sin(a) * 1e4]), fov: 40, cx: CX, cy: 520 });
+  const hy = C.project(vadd(eye, [Math.cos(a) * 1e9, 0, -Math.sin(a) * 1e9]))[1], top = C.project([0, HR * HRH, 0])[1];
+  cosmos(t, { dx: -tt * 16, dy: tt * 3, glints: 4, clipY: hy - 4 });
+  floorGrid(C, hy);
+  X.beginPath(); X.moveTo(0, hy); X.lineTo(W, hy); glowStroke(1.4, .6);
+  const js = []; for (let j = -14; j <= 200; j++) js.push(j);
   js.sort((p, q) => C.project([0, 600, -(q + .5) * HC])[2] - C.project([0, 600, -(p + .5) * HC])[2]);
-  drawStack(C, eye, js, (j, r) => steadyExt(t, j, r), { flushHandle: (j, r) => (t >= T_STOP && j === 1 && r === 2) ? PAL.orange : PAL.steel1 });
-  // a tick of light on each drawer as it lands home
+  drawStack(C, eye, js, (j, r) => steadyExt(t, j, r), { hot: (j, r) => j === HOT_J && r === HOT_R, flushHandle: (j, r) => (t >= T_STOP && j === HOT_J && r === HOT_R) ? PAL.orange : PAL.steel1 });
+  // a tick of light on each drawer as it lands home, and a bigger one when the last drawer slams flush
   for (const j of js) for (let r = 0; r < HR; r++) {
-    const d = t - (closeT(j, r) + .42); if (d < 0 || d > .3) continue;
+    const d = t - (j === HOT_J && r === HOT_R ? T_STOP : closeT(j, r) + .5); if (d < 0 || d > .3) continue;
     const q = C.project([-4, r * HRH + HRH - 48, -(j + .5) * HC]); if (q[2] < 60) continue;
-    sparkle(q[0], q[1], 16 * q[3] * 40, { col: PAL.shine, k: 1 - d / .3 });
+    sparkle(q[0], q[1], clamp(q[3] * 60, 5, 26) * (j === HOT_J && r === HOT_R ? 2.2 : 1), { col: j === HOT_J && r === HOT_R ? PAL.orange : PAL.shine, k: 1 - d / .3 });
   }
   // the wall's top edge becomes a level line: steel while settling, signal orange on the dead stop
-  const e0 = C.project([-2, HR * HRH, 10 * HC]), e1 = C.project([-2, HR * HRH, -40 * HC]);
-  line(e0[0], e0[1], e1[0], e1[1], t >= T_STOP ? 4 : 2, t >= T_STOP ? PAL.orange : PAL.steel2, t >= T_STOP ? 1 : .6);
+  const e0 = C.project([-2, HR * HRH, 8 * HC]), e1 = C.project([-2, HR * HRH, -200 * HC]);
+  line(e0[0], e0[1], e1[0], e1[1], t >= T_STOP ? 3.5 : 2, t >= T_STOP ? PAL.orange : PAL.steel2, t >= T_STOP ? 1 : .6);
   // LAN, a figurine on top of the wall, hands on hips; she settles with everything else
-  const lf = C.project([-160, HR * HRH, 3 * HC]), lp = lerpPose(move('idle', tt, 3), KP.hips, .85);
-  figure(lf[0], lf[1], lf[3] * 44, lp, { who: 'lan', col: PAL.paper, dark: true, face: t >= T_STOP ? 'happy' : 'smile', blush: 1, shadow: false });
+  let lf = null; for (let z = -9000; z <= 6000; z += 60) { const q = C.project([-150, HR * HRH, z]); if (q[2] > 60 && (!lf || Math.abs(q[0] - 1590) < Math.abs(lf[0] - 1590))) lf = q; }   // stand her at screen x ≈ 1590
+  const lp = lerpPose(move('idle', tt, 3), KP.hips, .85);
+  figure(lf[0], lf[1], lf[3] * 46, lp, { who: 'lan', col: PAL.paper, dark: true, face: t >= T_STOP ? 'happy' : 'smile', blush: 1, shadow: false });
   metaStrip(t, { col: PAL.paper, a: .5, tl: 'BRIDGE  ·  SETTLE', br: 'CH.07  ·  THE KITCHEN SINGULARITY' });
   // big steady type in the sky: each character slides out of its slot like a drawer and settles (no bounce);
   // 稳 arrives at speed and stops dead on the downbeat
   const L = LY[39], env = lyEnv(39, t, .5, .2);
   if (env > 0) {
     LYRIC_DRAWN.add(39);
-    const sz = 200, cs = 214, x0 = CX - cs * 2, y0 = top - cs - 40;
+    const sz = 200, cs = 214, x0 = CX - cs * 2, y0 = Math.min(top, hy) - cs - 60;
     X.save(); X.globalAlpha *= env;
     [...L.text].forEach((ch, j) => {
       const last = j === 3, k = last ? clamp((t - T_STOP + .2) / .2) : clamp((t - L.t[j] + .03) / .5), e = last ? Math.pow(k, 1.6) : E.soft(k); if (k <= 0) return;

@@ -501,7 +501,8 @@
       let P = lead && t > 134.3 ? move('wave', t) : move('sway', t, i);
       // 天: the whole crew lands one last little pull, with a hop
       const tk = t - LY[44].t[8];
-      if (tk > -.05) { P = lerpPose(P, i % 2 ? mirrorPose(KP.yank) : KP.yank, E.out5((tk + .05) / .16)); P.dy += .55 * Math.sin(clamp(tk / .32) * Math.PI) * (tk > 0 ? 1 : 0); }
+      // (in sync, everyone the same way)
+      if (tk > -.05) { P = lerpPose(P, lerpPose(KP.ready, KP.yank, .75), E.out5((tk + .05) / .16)); P.dy += .55 * Math.sin(clamp(tk / .32) * Math.PI) * (tk > 0 ? 1 : 0); }
       figure(q[0], q[1], sc * (lead ? 1.12 : 1), P, { who, col: ink, dark: night, face: t > T_DA ? 'happy' : (lead ? 'smile' : 'dot'), blush: lead ? 1 : 0, seed: i * 3 + 1, w: .24 });
     });
     // 嗒: the orange mark at the last drawer's leading edge

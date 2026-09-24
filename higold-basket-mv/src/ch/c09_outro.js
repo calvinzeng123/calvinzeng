@@ -132,7 +132,7 @@ function topFig(x, y, bx, by, s, A, who, o = {}) {
   const at = (ox, oy, l, f) => [ox + (v[0] * l + u[0] * f) * s, oy + (v[1] * l + u[1] * f) * s];
   const st = (pts, k, w = lw, tp = [.06, .2]) => inkStroke(pts, { w, col, taper: tp, wob: .35, seed: sd + k, press: .12 });
   const sx = x + bx, sy = y + by, hpx = x + bx * .42, hpy = y + by * .42;
-  const R = .8 * s, hx = sx + u[0] * (.3 * s + R), hy = sy + u[1] * (.3 * s + R), ang = Math.atan2(u[1], u[0]) + Math.PI / 2;
+  const R = .92 * s, hx = sx + u[0] * (.3 * s + R), hy = sy + u[1] * (.3 * s + R), ang = Math.atan2(u[1], u[0]) + Math.PI / 2;
   // feet (toes point in toward the centre) joined to the hips by the legs
   for (const sg of [-1, 1]) {
     const f = at(x, y, sg * .55 + (o.step ?? 0) * sg * .25, 0), hp = at(hpx, hpy, sg * .38, 0);
@@ -153,7 +153,7 @@ function topFig(x, y, bx, by, s, A, who, o = {}) {
   }
   // the upturned face: crown points outward along the lean
   X.save(); X.translate(hx, hy); X.rotate(ang);
-  const hs = (pts, k, ww = 1.5, tp = [.1, .3]) => inkStroke(pts.map(([a, c]) => [a * R, c * R]), { w: lw * ww * .8, col, taper: tp, wob: .3, seed: sd + k });
+  const hs = (pts, k, ww = 1.5, tp = [.1, .3]) => inkStroke(pts.map(([a, c]) => [a * R, c * R]), { w: lw * ww * .5, col, taper: tp, wob: .3, seed: sd + k });
   if (who === 'pony') hs([[0, -1.05], [(o.swing ?? 0) * .6, -1.9], [(o.swing ?? 0) * 1.2, -2.6]], 30, 2.2, [.1, .7]);
   if (who === 'long') for (const sg of [-1, 1]) hs([[sg * .95, -.3], [sg * 1.15, .6], [sg * 1.1, 1.5]], 31 + sg, 1.6, [.05, .5]);
   if (who === 'buns') for (const sg of [-1, 1]) circle(sg * .78 * R, -.95 * R, .4 * R, { fill: col });
@@ -294,8 +294,8 @@ function shotWide(t, lt, dur) {
   const order = [0, 4, 1, 3, 2];      // outer first (drawn behind), LAN last
   for (const i of order) {
     const who = CREW[i], k = i - 2, lead = who === 'lan', d = .03 * Math.abs(k);
-    let P = poseTrack(t - d, keys, .14); if (k < 0) P = mirrorPose(P);
-    const x = CX + k * (340 - 50 * vk), y = fl - Math.abs(k) * 70 * vk, s = (lead ? 58 : 50) * (1 - .1 * Math.abs(k) * vk);
+    const P = poseTrack(t - d, keys, .14);      // unison: every member hits the same side
+    const x = CX + k * (370 - 50 * vk), y = fl - Math.abs(k) * 70 * vk, s = (lead ? 58 : 50) * (1 - .1 * Math.abs(k) * vk);
     tapeMark(x, y + 26, 20, lead ? PAL.orange : PAL.ink, 60 + i, lead ? 1 : .5);
     haloFig(x, y, s, P, { who, seed: i * 3 + 1, face: lead ? 'smile' : 'dot', blush: lead ? 1 : 0 });
     stomp(x, y, s, Math.max(stompAt(t - d, t0), stompAt(t - d, t0 + 2 * E8 + .3)), PAL.ink, 80 + i);
@@ -321,16 +321,17 @@ function shotExploded(t, lt, dur) {
   dotGrid(24, 24, W, H, 48, 1.5, PAL.ink, .1);
   const e = E.out5((t - b(208) + .02) / .32) * (1 - E.soft((t - b(209) + .02) / .75));
   punchCam(t, .8, CX, CY, 1);
-  const C = frameCam([0, 300, 430], lerp(.9, .68, E.io(lt / (dur + .3))), .34, CX + 30, 560, 1100, 1450, { fov: 28 });
+  const C = frameCam([0, 280, 520], lerp(.9, .68, E.io(lt / (dur + .3))), .34, CX + 20, 560, 1100, 1400, { fov: 28 });
   // exploded-drawing guides
   const g = (a, c) => { const p = pin(C, a), q = pin(C, c); X.save(); X.setLineDash([7, 9]); X.strokeStyle = PAL.ink2; X.globalAlpha *= .55 * clamp(e * 3); X.lineWidth = 2; X.beginPath(); X.moveTo(p[0], p[1]); X.lineTo(q[0], q[1]); X.stroke(); X.restore(); };
   if (e > .02) { g([0, 190, 460], [0, 190, 460 + 420 * e]); g([-294, 142, 220], [-294 - 230 * e, 142, 220]); g([294, 142, 220], [294 + 230 * e, 142, 220]); g([-146, 196, 160], [-146, 196 + 330 * e, 160]); g([158, 60, 130], [158, 60 + 290 * e, 130]); }
   render3(explodedPrims(e), C, { style: 'steel', shine: lerp(-500, 500, ramp(t, b(208), .9)) });
   const lk = ramp(t, b(208) + .18, .3) * (1 - ramp(t, b(209) - .05, .15));
   if (lk > 0) {
-    const [a1, a2] = pin(C, [-280, 210, 20]); callout(a1, a2, 330, 330, '碗碟拉篮', { k: lk, size: 26, dir: -1 });
-    const [b1, b2] = pin(C, [294 + 230 * e, 142, 380]); callout(b1, b2, 1640, 880, '阻尼缓冲 · 滑轨', { k: lk, size: 26 });
-    const [c1, c2] = pin(C, [316, 330, 460 + 420 * e]); callout(c1, c2, 1600, 230, '全拉出', { k: lk, size: 26 });
+    const lab = (p, dx, dy, str, dir) => { const [x1, y1] = pin(C, p); callout(x1, y1, x1 + dx, y1 + dy, str, { k: lk, size: 28, dir }); };
+    lab([280, 210, 60], 110, -90, '碗碟拉篮', 1);
+    lab([294 + 230 * e, 142, 440], -40, 120, '阻尼缓冲 · 滑轨', -1);
+    lab([-150, 330, 460 + 420 * e], -70, -110, '全拉出', -1);
   }
   mono('EXPLODED VIEW  ·  碗碟拉篮', 64, 100, { weight: 500 });
   text('HIGOLD 悍高', 64, 70, { size: 22, font: F.sans, weight: 700, track: 2, a: .85 });

@@ -215,7 +215,7 @@ function shotCornerB(t, lt, dur) {
   paperBG();
   // bar cut: close and low on the carousel as it lands, the void clearing behind it
   const k = E.io(seg(lt, 0, dur + .4));
-  const C = frameCam([760, 330, 700], lerp(.36, .28, k), lerp(.68, .62, k), 1250, 610, 1500, lerp(1180, 1260, k) / punch(t, 76.042, .05), { fov: 28 });
+  const C = frameCam([880, 330, 720], lerp(.9, .82, k), lerp(.7, .64, k), 1270, 600, 1500, lerp(1060, 1130, k) / punch(t, 76.042, .05), { fov: 28 });
   cornerScene(C, t, { clipX: 700 });
   vcol(23, t, LX, TY);
   plate(lt + 3, 'I', '转角拉篮', 'Corner unit — swings out of the blind corner', { align: 'right' });
@@ -284,7 +284,8 @@ function shotPantryA(t, lt, dur) {
   paperBG();
   const ext = 500 * E.soft(seg(t, 78.6, 80.2)), drift = seg(t, 77.1, 79.4);
   // side-on 3/4 from the first frame, so the glide on 拉 reads as lateral travel; slow push + a punch on 拉
-  const C = frameCam([0, 1130, lerp(330, 470, E.soft(seg(t, 78.6, 79.6)))], -1.0 - drift * .08, .15, 700, 548, (2500 - drift * 260) * punch(t, 78.77, .05), 1000, { fov: 30 });
+  const pk = E.io3(seg(t, 78.6, 79.4));
+  const C = frameCam([0, lerp(1130, 1330, pk), lerp(330, 620, E.soft(seg(t, 78.6, 79.6)))], -1.0 - drift * .08 - pk * .08, .15 + pk * .06, lerp(700, 760, pk), 548, lerp(2500 - drift * 200, 1700, pk) * punch(t, 78.77, .05), 1000, { fov: 30 });
   const ro = { style: 'steel', shine: lerp(-200, 1300, seg(t, 78.6, 79.5)) };
   pantryScene(C, t, ext, ro);
   // floor-to-ceiling dimension line (no numbers: 通高) in front of the closed column, drawn up on 高柜
@@ -370,7 +371,7 @@ function shotLift(t, lt, dur) {
   const th = LD.TH * LD.HALF * E.soft(seg(t, 82.62, 84.2));
   // worm's-eye, then the PUSH on 轻 (82.69): the basket swings toward the lens as the camera closes in; punch on 降 (83.372)
   const push = E.io3(seg(t, 82.6, 83.5));
-  const C = frameCam([0, 1690, lerp(300, 380, push)], lerp(.55, .36, push) - lt * .01, lerp(-.2, -.1, push), 1200, lerp(430, 470, push), lerp(1500, 1130, push) * punch(t, 83.372, .04), 1000, { fov: 32 });
+  const C = frameCam([0, 1690, lerp(300, 380, push)], lerp(.58, .36, push) - lt * .012, lerp(-.24, -.1, push), 1200, lerp(470, 480, push), lerp(1320 - lt * 40, 1100, push) * punch(t, 83.372, .04), 1000, { fov: 32 });
   const ro = { style: 'steel', shine: lerp(-600, 700, seg(t, 82.5, 84.4)) };
   const riders = { pose: (who, seed) => t < 81.98 ? move('idle', t, seed) : t < 82.62 ? move('pointDown', t, seed) : t < 83.6 ? WHEE : move('wave', t, seed), face: t > 82.6 && t < 83.6 ? 'wow' : 'happy' };
   const F0 = liftSet(C, th, ro, { t, riders, out: () => {
@@ -451,7 +452,7 @@ function shotTiptoe(t, lt, dur) {
 const MU = { fy: 872, px0: 1040, px1: 1460, py: 604, gx0: 1054, gx1: 1446, gy: 226, dx: 36, dy: -26, cx: 1250, sx: 1000 };
 function museumWall(t, o = {}) {
   // floor line + skirting (optionally broken where the crew stands), a ceiling track with one spotlight
-  X.save(); if (o.gap) { X.beginPath(); X.rect(-50, 0, o.gap[0] + 50, H); X.rect(o.gap[1], 0, W, H); X.clip(); }
+  X.save(); if (o.gap) { const x0 = o.from ?? -50; X.beginPath(); X.rect(x0, -200, o.gap[0] - x0, H + 400); X.rect(o.gap[1], -200, W, H + 400); X.clip(); }
   handLine(-20, MU.fy, W + 20, MU.fy, { w: 2.5, seed: 501 }); line(0, MU.fy - 12, W, MU.fy - 12, 1, PAL.ink2, .35); X.restore();
   line(760, 56, 1190, 56, 3, PAL.ink); line(760, 64, 1190, 64, 1, PAL.ink2, .5);
 }
@@ -492,7 +493,7 @@ function statue(t, o = {}) {
   const gy = MU.py - 8, cw = 118, ch = 128, bx = 1300, bt = gy - ch;
   fillPoly([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4], [1080, gy - 4]], PAL.paper2);
   inkStroke([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4]], { w: 1.8, col: PAL.ink2, seed: 88, taper: [.01, .01] });
-  kneelCast(bx - 96, gy - 2, 44, [bx + 40, gy - 58]);
+  kneelCast(bx - 106, gy - 2, 52, [bx + 40, gy - 60]);
   // the small cabinet: a paper frame around a black mouth that swallows head and arms, door swung open
   X.save(); X.beginPath(); X.rect(bx, bt, cw, ch); X.rect(bx + 12, bt + 12, cw - 24, ch - 24); X.fillStyle = PAL.paper; X.fill('evenodd'); X.restore();
   rect(bx + 12, bt + 12, cw - 24, ch - 24, PAL.ink);
@@ -557,8 +558,8 @@ function museumLabel(x, y, a = 1, retire = 0) {
   X.restore();
 }
 function exhibitHead(a = 1) {
-  text('特展', 112, 92, { size: 22, font: F.serif, weight: 900, col: PAL.ink2, track: 6, a });
-  text('Retired Habits — a small exhibition', 112, 124, { size: 24, font: F.serifI, col: PAL.grey, a });
+  text('特展', 112, 982, { size: 22, font: F.serif, weight: 900, col: PAL.ink2, track: 6, a });
+  text('Retired Habits — a small exhibition', 112, 1014, { size: 24, font: F.serifI, col: PAL.grey, a });
 }
 function shotMuseum(t, lt, dur) {
   paperBG();
@@ -605,8 +606,8 @@ function shotParty(t, lt, dur) {
   paperBG();
   // a clearly different framing: wider and lower, the crew posing in front of the plinth like a retirement photo
   const k = E.io(seg(lt, 0, dur + .6));
-  cam(lerp(1050, 1040, k), lerp(640, 650, k), lerp(.8, .83, k));
-  museumWall(t, { gap: [880, 1640] }); spotlight(t);
+  cam(lerp(1050, 1040, k), lerp(565, 575, k), lerp(.8, .83, k));
+  museumWall(t, { gap: [880, 1640], from: 640 }); spotlight(t);
   vitrine(t, { shine: .75 + seg(lt, 0, dur) * .3, hat: seg(t, 92.3, 92.62) });
   // 荣休 rosette pinned to the glass on 休
   const rk = E.back(seg(t, 92.32, 92.64), 2);
@@ -629,7 +630,7 @@ function shotParty(t, lt, dur) {
   bouquet(lf.handL[0] - 4, lf.handL[1] - 12, 38);
   camEnd();
   confetti(t, 92.88);
-  toast(1240, 104, 600, '习惯「蹲下翻找」已下线', '感谢一直以来的付出', { k: seg(t, 92.88, 93.4), from: 80 });
+  toast(1300, 68, 556, '习惯「蹲下翻找」已下线', '感谢一直以来的付出', { k: seg(t, 92.88, 93.4), from: 80 });
   vcol(27, t, LX, TY, { hold: .6 });
   cropMarks();
 }
