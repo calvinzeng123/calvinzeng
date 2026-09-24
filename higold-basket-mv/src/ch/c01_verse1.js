@@ -273,7 +273,7 @@ function kneelLan(Kx, Ky, U, t, into) {
   }
   // torso slopes down from the raised hips into the dark
   const ang = Math.atan2(N[1] - H[1], N[0] - H[0]), W0 = [H[0] + Math.cos(ang) * .45 * U, H[1] + Math.sin(ang) * .45 * U];
-  st([W0, [lerp(W0[0], N[0], .5), lerp(W0[1], N[1], .5) - .1 * U], N], 7, lw * 1.15, [.02, .02]);
+  st([W0, [lerp(W0[0], N[0], .5), lerp(W0[1], N[1], .5) - .08 * U], N], 7, lw * 1.8, [.02, .02]);
   // shorts: a small solid shape with a paper waistband
   const R2 = (a, b) => { const [x, y] = rot2(a * U, b * U, ang * .6); return [H[0] + x, H[1] + y]; };
   const sh = [[.5, -.36], [-.2, -.5], [-.66, -.3], [-.7, .16], [-.36, .46], [.12, .44], [.5, .2]].map(([a, b]) => R2(a, b));
@@ -283,10 +283,15 @@ function kneelLan(Kx, Ky, U, t, into) {
   return { H, N };
 }
 // LAN's arm reaching back out of the dark, flinging things over her shoulder on the 8ths
+function flingGeo(S, U, t) {
+  const sw = Math.sin(bp(t) * 2 * Math.PI), a1 = -2.5 + .5 * sw, a2 = a1 - .35 - .5 * sw;
+  const E1 = [S[0] + Math.cos(a1) * 1.75 * U, S[1] + Math.sin(a1) * 1.75 * U];
+  return [E1, [E1[0] + Math.cos(a2) * 1.55 * U, E1[1] + Math.sin(a2) * 1.55 * U]];
+}
 function flingArm(S, U, t) {
-  const ph = bp(t) * 2, sw = Math.sin(ph * Math.PI), a1 = -2.25 + .55 * sw, a2 = a1 - .5 - .45 * sw;
-  const E1 = [S[0] + Math.cos(a1) * 1.9 * U, S[1] + Math.sin(a1) * 1.9 * U], Hd = [E1[0] + Math.cos(a2) * 1.7 * U, E1[1] + Math.sin(a2) * 1.7 * U];
-  inkStroke([S, E1, Hd], { w: .19 * U, taper: [.05, .2], wob: .5, seed: 340, press: .2 });
+  const [E1, Hd] = flingGeo(S, U, t);
+  inkStroke([S, E1, Hd], { w: .22 * U, taper: [.02, .05], wob: .5, seed: 340, press: .2 });
+  circle(Hd[0], Hd[1], .27 * U, { fill: PAL.paper }); handCircle(Hd[0], Hd[1], .27 * U, { w: .13 * U, seed: 341 });
   return Hd;
 }
 
@@ -311,10 +316,10 @@ function dampPlot(x, y, w, h, t, t0, dur) {
   const span = dur + .5, u = tt => x + (tt - (t0 - .3)) / span * w, v = k => y + h - k * h * .82;
   line(x, y + h, x + w + 14, y + h, 2.5); line(x, y + h, x, y - 12, 2.5);
   X.save(); X.setLineDash([8, 8]); line(x, v(1), x + w, v(1), 1.6, PAL.ink, .5, 'butt'); X.restore();
-  text('到位', x + w + 12, v(1) + 8, { size: 20, font: F.sans, weight: 700 });
+  text('到位', x + w + 26, v(1) + 8, { size: 20, font: F.sans, weight: 700 });
   text('拉出 ↑', x + 12, y - 4, { size: 18, font: F.mono, weight: 600, col: PAL.ink2 });
   text('t →', x + w + 14, y + h + 30, { size: 18, font: F.mono, weight: 600, col: PAL.ink2, align: 'right' });
-  text('SOFT-PULL · 阻尼曲线', x, y + h + 34, { size: 18, font: F.mono, weight: 600, col: PAL.ink, track: 1 });
+  text('PULL-OUT · 全拉出曲线', x, y + h + 34, { size: 18, font: F.mono, weight: 600, col: PAL.ink, track: 1 });
   const pts = [], tEnd = Math.min(t, t0 + dur + .2);
   for (let tt = t0 - .3; tt <= tEnd; tt += .02) pts.push([u(tt), v(tt < t0 ? 0 : E.soft((tt - t0) / dur))]);
   if (pts.length > 1) inkStroke(pts, { w: 4.5, taper: [.02, .02], wob: .3, seed: 501 });
@@ -348,6 +353,7 @@ function prodShot(ext, o = {}) {
   F([[ex, 400, -20], [ex, 400, 490], [ex, 430, 490], [ex, 430, -20]], PAL.paper);
   F([[-350, 400, 490], [350, 400, 490], [350, 430, 490], [-350, 430, 490]], PAL.paper2, 2.2);
   F([[-350, 430, -20], [350, 430, -20], [350, 430, 490], [-350, 430, 490]], PAL.paper, 2.2);
+  if (ext < 40) F([[-330, 330, 460], [330, 330, 460], [330, 400, 460], [-330, 400, 460]], o.rail ?? PAL.paper, 2);
   P.push(...dishDrawer(ext, { items: o.items }));
   render3(P, C, { style: o.style ?? 'steel', shine: o.shine, lw: o.lw });
   return C;
@@ -357,12 +363,12 @@ function prodShot(ext, o = {}) {
 const T_OPEN = BT(2);            // 1.554 — the door flies open on 我
 
 // ---- ink wisps: darkness curling out of a door gap (edge a→b, outward side away from `c`) ----
-function wisps(a, b, c, t, k, n, seed) {
+function wisps(a, b, c, t, k, n, seed, us) {
   if (k < .01) return;
   const ex = b[0] - a[0], ey = b[1] - a[1], el = Math.hypot(ex, ey) || 1; let nx = ey / el, ny = -ex / el;
   const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2; if ((mx - c[0]) * nx + (my - c[1]) * ny < 0) { nx = -nx; ny = -ny; }
   for (let i = 0; i < n; i++) {
-    const u = (i + .5) / n + .08 * noise1(seed + i * 3.1 + t * .4), px = lerp(a[0], b[0], u), py = lerp(a[1], b[1], u);
+    const u = (us ? us[i] : (i + .5) / n) + .04 * noise1(seed + i * 3.1 + t * .4), px = lerp(a[0], b[0], u), py = lerp(a[1], b[1], u);
     const L = k * (120 + 110 * (.5 + .5 * noise1(seed * 7 + i * 1.7 + t * 1.3))), dir = (i + seed) % 2 ? 1 : -1, pts = [];
     for (let j = 0; j <= 22; j++) {
       const s2 = j / 22, d = L * s2, wig = Math.sin(s2 * 5 + t * 4 + i * 2) * 16 * s2;
@@ -376,7 +382,7 @@ function wisps(a, b, c, t, k, n, seed) {
 // the cold-open door: slightly ajar, banging open wider on the beats (a bounce), then flung on 我
 function ajarAt(t) {
   const hb = t >= BT(0) ? (() => { const n = Math.min(beatN(t), 1), sb = t - BT(n); return (n === 0 ? .7 : 1) * Math.exp(-sb * 6) * Math.abs(Math.sin(sb * 24)); })() : 0;
-  return .3 + .03 * Math.sin(t * 4.3) + .32 * hb;
+  return .36 + .03 * Math.sin(t * 4.3) + .3 * hb;
 }
 
 // ---- 0.0 – 5.96 · cold open → the black hole reveal (one take) ----
@@ -395,7 +401,7 @@ function sHole(t) {
   // the hole + where it leaks: the crack along the door's free edge
   const dc = P2(C, [0, 440, -260]), ow = dist(G.open[0][0], G.open[0][1], G.open[1][0], G.open[1][1]);
   const R = ow * .42 * (1 + .05 * hit);
-  const reveal = opened ? E.out5(clamp((door - .3) / .5)) : 0, gone = 1 - clamp(o / .25);
+  const reveal = opened ? E.out5(clamp((door - .5) / .45)) : 0, gone = 1 - clamp(o / .25);
   const ck = [lerp(G.open[0][0], G.front[0][0], .5), lerp(G.open[0][1], G.open[3][1], .55)];
   const L = { x: lerp(ck[0], dc[0], reveal), y: lerp(ck[1], dc[1], reveal), mode: 'pinch', R: R * .98 * reveal,
     e: lerp(235 + 60 * hitCO, R * 1.12, reveal), k: 1, sw: lerp(.7 + .4 * hitCO, .9 + .5 * hit + .25 * Math.sin(t * .9), reveal) };
@@ -414,12 +420,11 @@ function sHole(t) {
   const wk = 1 - clamp((o + .05) / .2);
   if (wk > 0) {
     const pullIn = 18 * t + 30 * (t >= BT(0) ? 1 - Math.exp(-(t - BT(0)) * 9) : 0) + 30 * (t >= BT(1) ? 1 - Math.exp(-(t - BT(1)) * 9) : 0);
-    const ang = -2.62 + .07 * Math.sin(t * 6) + .12 * hitCO * Math.sin(sb * 30), dx = Math.cos(ang), dy = Math.sin(ang), sz = 64;
-    const bcx = ck[0] + 6 - dx * pullIn, bcy = ck[1] - 30 - dy * pullIn;
-    // handle points out along (dx, dy): the pot's local +x is its handle side
-    ware('pot', bcx, bcy, sz, ang, { seed: 5, w: 4.2, a: wk });
-    const tipx = bcx + dx * 2.05 * sz, tipy = bcy + dy * 2.05 * sz, bl = Math.min(tipx, bcx - sz * .9) - 16, bt = Math.min(tipy, bcy - sz * .75) - 16;
-    const br = ck[0] + 10, bb = bcy + sz * .75 + 14;
+    const wob = .06 * Math.sin(t * 6) + .14 * hitCO * Math.sin(sb * 30), sz = 84;
+    const bcx = ck[0] - .3 * sz + pullIn * .55, bcy = ck[1] - 20 + pullIn * .12;
+    // mirrored wok: bowl jammed in the crack, the long handle sticking out up-left
+    X.save(); X.translate(bcx, bcy); X.scale(-1, 1); ware('pot', 0, 0, sz, .32 + wob, { seed: 5, w: 4.4, a: wk, stretch: 1 + pullIn * .0025, sdir: 0 }); X.restore();
+    const bl = bcx - 2.05 * sz - 12, bt = bcy - 1.05 * sz - 12, br = ck[0] + 12, bb = bcy + .72 * sz + 14;
     bbox(bl, bt, br - bl, bb - bt, '锅  404', { k: 1, a: wk, size: 28, lw: 3.5, dash: t > 1.25 ? [12, 9] : [] });
   }
   // the door: rattles in screen space on the beats (a jolt about its hinge)
@@ -429,7 +434,7 @@ function sHole(t) {
   if (gone > 0) {
     gapLine(G.front, gone * (.6 + .5 * hitCO));
     const cen = [(G.front[0][0] + G.front[2][0]) / 2, (G.front[0][1] + G.front[2][1]) / 2];
-    wisps(G.front[3], G.front[0], cen, t, gone * (.85 + .55 * hitCO), 4, 1);
+    wisps(G.front[3], G.front[0], cen, t, gone * (.85 + .55 * hitCO), 4, 1, [.04, .72, .84, .96]);
   }
   X.restore();
   if (opened) {
@@ -488,15 +493,16 @@ function sSwallow(t, lt) {
   // minor debris (never tagged)
   SW2.forEach(([kind, tv, phv, sz], i) => {
     const [x, y, r, ph] = swPos(tv, phv, t, cx, cy, R); if (r > 1300) return;
+    const fa = clamp((x - 800) / 50); if (fa <= 0) return;   // never through the lyric column
     const st = 1 + .9 * Math.pow(clamp((2.2 * R - r) / (1.2 * R)), 1.4);
-    ware(kind, x, y, sz * (.55 + .45 * clamp(r / (2.5 * R))), t * (.5 + hash(i) * .6) + i, { seed: 90 + i, stretch: st, sdir: ph, w: 3.4 });
+    ware(kind, x, y, sz * (.55 + .45 * clamp(r / (2.5 * R))), t * (.5 + hash(i) * .6) + i, { seed: 90 + i, stretch: st, sdir: ph, w: 3.4, a: fa });
   });
   // the four sung items: detection box → 404
   SW.forEach(([kind, lab, tt, tv, phv, sz], i) => {
     const alive = t < tv, [x, y, r, ph] = swPos(tv, phv, alive ? t : tv, cx, cy, R);
     if (alive && r < 1300) {
       const st = 1 + 1.1 * Math.pow(clamp((2.3 * R - r) / (1.25 * R)), 1.4), sc = sz * (.6 + .4 * clamp(r / (2.4 * R)));
-      const fade = clamp((tv - t) / .07);
+      const fade = clamp((tv - t) / .07) * clamp((x - 800) / 50);
       const trail = []; for (let j = 0; j <= 12; j++) { const q = swPos(tv, phv, t - j * .03, cx, cy, R); trail.push([q[0], q[1]]); }
       inkStroke(trail.reverse(), { w: 9, taper: [.95, .05], seed: 220 + i, a: .4 * fade });
       ware(kind, x, y, sc, (t - tt) * (.5 + i * .12) * (i % 2 ? -1 : 1) - .25 + i * .15, { seed: 230 + i, stretch: st, sdir: ph, a: fade, w: 4 });
@@ -526,22 +532,29 @@ function sKneel(t, lt) {
   // LAN: knees on the floor in front of the opening; everything that enters the opening is swallowed
   const K = P2(C, [0, 0, 440]), U = 98;
   X.save(); X.globalAlpha = .1; X.fillStyle = PAL.ink; X.beginPath(); X.ellipse(K[0] - 130, K[1] + 6, 230, 17, 0, 0, TAU); X.fill(); X.restore();
-  const ob = G.open[0], ot = G.open[3], into = [ob[0] + 70, lerp(ob[1], ot[1], .06)];
+  const ob = G.open[0], ot = G.open[3], ev = .1, into = [lerp(ob[0], ot[0], ev) + 20, lerp(ob[1], ot[1], ev)];
+  const edgeX = y => lerp(ob[0], ot[0], (y - ob[1]) / (ot[1] - ob[1]));
+  const hr = 1.02 * U, hd = [edgeX(into[1] - .25 * U) + .38 * hr, into[1] - .25 * U], S = [edgeX(into[1]) + 4, into[1] - .15 * U];
   X.save(); X.beginPath(); X.rect(0, 0, W, H); X.moveTo(G.open[0][0], G.open[0][1]); for (const q of G.open) X.lineTo(q[0], q[1]); X.closePath(); X.clip('evenodd');
   kneelLan(K[0], K[1], U, t, into);
+  // the back of her head just at the edge of the dark: the bob and the orange clip
+  const wig = Math.sin(t * 17) * .04;
+  X.save(); X.translate(hd[0], hd[1]); X.rotate(wig);
+  X.fillStyle = PAL.ink; X.beginPath(); X.ellipse(0, 0, hr, hr * 1.02, 0, 0, TAU); X.fill();
+  X.fillStyle = PAL.orange; X.save(); X.translate(-.62 * hr, -.5 * hr); X.rotate(.75); X.beginPath(); X.roundRect(-.3 * hr, -.09 * hr, .6 * hr, .18 * hr, .09 * hr); X.fill(); X.restore();
   X.restore();
-  // inside the dark: rummaging marks in paper colour
+  flingArm(S, U, t);
+  X.restore();
+  // inside the dark: one '?!' up high (no face-like pairs)
   X.save(); poly(G.open); X.clip();
   const oc = [(G.open[0][0] + G.open[2][0]) / 2, (G.open[0][1] + G.open[2][1]) / 2];
-  for (let i = 0; i < 3; i++) { const a = t * 9 + i * 2.1, r = 40 + i * 16; inkStroke(ell(oc[0] + 10, oc[1] + 90, r, r * .6, 0, a, a + 1.4, 14), { w: 3.5, col: PAL.paper, taper: [.2, .6], seed: 330 + i, a: .8 }); }
-  text('?', oc[0] + 44 + Math.sin(t * 8) * 6, oc[1] - 20, { size: 72, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: .15 });
-  text('?', oc[0] - 20, oc[1] - 70 + Math.cos(t * 7) * 5, { size: 48, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: -.2, a: .8 });
+  text('?!', oc[0] + 30 + Math.sin(t * 8) * 5, lerp(ob[1], ot[1], .8), { size: 84, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: .12 });
   X.restore();
-  // stuff flung out of the cabinet over her back, on the 8ths
+  // stuff flung out of the cabinet by her hand, released at the top of each swing (the 8ths)
   const tossK = ['lid', 'spoon', 'bowl', 'cup', 'chop', 'plate', 'spat'];
   for (let i = 0; i < 7; i++) {
-    const t0 = BT(11.25) + i * BEAT / 2, a = t - t0; if (a < 0 || a > 1.5) continue;
-    const vx = -(560 + hash(i) * 360), vy = -(820 + hash(i + 4) * 260), x = ot[0] + 30 + vx * a, y = lerp(ob[1], ot[1], .45) + vy * a + 1500 * a * a;
+    const t0 = BT(11.5) + i * BEAT / 2, a = t - t0; if (a < 0 || a > 1.5) continue;
+    const h0 = flingGeo(S, U, t0)[1], vx = -(480 + hash(i) * 320), vy = -(700 + hash(i + 4) * 240), x = h0[0] + vx * a, y = h0[1] + vy * a + 1500 * a * a;
     ware(tossK[i], x, y, 40 + hash(i + 9) * 14, a * (7 + i) * (i % 2 ? 1 : -1), { seed: 350 + i, w: 3.4 });
   }
   lyMarker(2, t, { x: 118, y: 250, size: 150, align: 'left', rot: -.05 });
@@ -632,14 +645,14 @@ const T_PULL = LY[4].t[5] - .004;   // 拉
 function sPull(t, lt) {
   paperBG();
   const pk = E.soft((t - T_PULL) / 1.4), ext = 420 * pk, orb = E.io(clamp(lt / 4.4));
-  const opt = { sx: 1280, sy: 610, px: 800, yaw: lerp(-.24, -.74, orb), pitch: lerp(.28, .58, orb) };
+  const opt = { sx: 1280, sy: lerp(610, 530, pk), px: lerp(800, 690, pk), yaw: lerp(-.24, -.74, orb), pitch: lerp(.28, .58, orb) };
   // residual warp that snaps straight on the pull, with a spring wobble
   const Cg = frameCam([0, 150, 230 + ext * .5], opt.yaw, opt.pitch, opt.sx, opt.sy, 760, opt.px, { fov: 28 });
   const fc = P2(Cg, [0, 170, 460 + ext]);
   const kWarp = t < T_PULL ? .85 + .1 * Math.sin(t * 3) : .95 * (1 - spring(t - T_PULL, 2.2, .3));
   warpGrid({ gap: 60, L: { x: fc[0], y: fc[1], e: 190, R: 0, k: kWarp, sw: .5, mode: 'pinch' }, a: .075 });
   const shine = t > T_PULL + .5 ? lerp(-460, 460, E.io(clamp((t - T_PULL - .5) / 1.3))) : null;
-  const C = prodShot(ext, { ...opt, style: 'steel', shine });
+  const C = prodShot(ext, { ...opt, style: 'steel', shine, rail: PAL.ink });
   // darkness still leaking round the closed front — gone once it's pulled
   const fq = [[-316, 330, 461 + ext], [316, 330, 461 + ext], [316, 10, 461 + ext], [-316, 10, 461 + ext]].map(p => P2(C, p));
   if (pk < .3) {   // the old darkness still leaks round the closed front — until it's pulled
@@ -671,7 +684,8 @@ function sFace(t, lt) {
   // zoom about the face (not the screen centre)
   X.save(); X.translate(cx, cy); X.scale(z, z); X.translate(-cx, -cy);
   const U = 128, bob = Math.sin(bp(t) * Math.PI);
-  const f = figure(cx, cy + 9.15 * U + 22 * (1 - Math.abs(bob)), U, { ...KP.frame, head: .1 * bob, lean: .02 * bob }, { who: 'lan', face: 'star', blush: 1.2 + .6 * p, seed: 610, w: .14, shadow: false });
+  const f = figure(cx, cy + 9.15 * U + 22 * (1 - Math.abs(bob)), U, { ...KP.frame, sL: 1.42, sR: 1.42, eL: 2.12, eR: 2.12, head: .1 * bob, lean: .02 * bob }, { who: 'lan', face: 'star', blush: 1.2 + .6 * p, seed: 610, w: .14, shadow: false, clear: false });
+  for (const hd of [f.handL, f.handR]) { circle(hd[0], hd[1], .3 * U, { fill: PAL.paper }); handCircle(hd[0], hd[1], .3 * U, { w: .12 * U, seed: 620 + hd[0] % 7 }); }
   X.restore();
   // the machine notices
   const hx = (f.head[0] - cx) * z + cx, hy = (f.head[1] - cy) * z + cy, hr = f.head[2] * z * 1.45;
@@ -687,6 +701,7 @@ function sFace(t, lt) {
 
 // ---- 17.9 – 20.65 · slow-mo soft close, the first 嗒 ----
 const T_DA = BT(28);   // 19.286 刚
+const L5 = { x: 116, y: 450, size: 144, align: 'left', lead: 1.18, exit: 'fade', hold: .25 };
 function closeExt(t) {
   if (t < 17.92) return 420;
   if (t < 18.6) return lerp(420, 110, E.io((t - 17.92) / .68) * .96 + (t - 17.92) / .68 * .04);
@@ -699,12 +714,12 @@ function sClose(t, lt) {
   const C = prodShot(ext, { xray: .62, sx: 1320, sy: 590, px: 880, yaw: lerp(-.98, -.9, E.io(clamp(lt / 2.7))), pitch: .26, style: 'steel', shine: lerp(300, -300, clamp(lt / 2.5)) });
   const rail = pin(C, [-294, 142, 360]);
   const ck = clamp((t - 18.45) / .7);
-  callout(rail[0], rail[1], rail[0] - 90, 996, 'SOFT-CLOSE · 阻尼缓冲', { k: ck, dir: 1, size: 28 });
+  callout(rail[0], rail[1], rail[0] - 120, 1000, 'SOFT-CLOSE · 阻尼缓冲', { k: ck, dir: -1, size: 28 });
   // the 嗒 lands on the drawer front itself — the sound of it closing
   const fc = pin(C, [0, 190, 461 + ext]);
   daStamp(fc[0] + 10, fc[1] + 10, 230, t - T_DA, {});
   text('SLOW-MO', W - 72, 96, { size: 20, font: F.mono, weight: 600, align: 'right', col: PAL.ink2, track: 3, a: .8 });
-  lyHero(5, t, { x: 116, y: 450, size: 144, align: 'left', lead: 1.18, exit: 'fade', hold: .25 });
+  lyHero(5, t, L5);
 }
 // the grid scrolls left, accelerating into the chorus
 function gridScroll(t) {
@@ -729,7 +744,7 @@ function buildShot(v) {
       const x = W + 300 - ((pos * (1.6 + hash(i + 2) * 1.2) + hash(i + 7) * span) % span);
       inkStroke([[x, y], [x + l, y]], { w: 2.5 + hash(i + 5) * 3.5, taper: [.04, .95], wob: .2, seed: 800 + i, a: .55 * sp });
     }
-    lyHero(5, t, { x: 116, y: 450, size: 150, align: 'left', lead: 1.18, exit: 'fade', hold: .25 });
+    lyHero(5, t, L5);
     metaStrip(t, { br: 'NEXT ▸ 一拉就到位', a: .9 });
   };
 }
@@ -742,9 +757,9 @@ chapter('verse1', 0, 23.0, [
   [BT(18), sPull],
   [BT(24), sFace],
   [17.9, sClose],
-  [BT(30), buildShot({ dir: 1, d: .6, px: 820, yaw: -.5, pitch: .44 })],
+  [BT(30), buildShot({ dir: 1, d: .6, px: 720, sy: 560, yaw: -.5, pitch: .44 })],
   [BT(32), buildShot({ dir: -1, d: .2, px: 900, yaw: -1.0, pitch: .2, sx: 1330, ds: 200, xray: .6 })],
   [BT(32.5), buildShot({ dir: 1, d: .28, px: 700, yaw: -.25, pitch: .95, sx: 1340, sy: 610 })],
-  [BT(33), buildShot({ dir: -1, d: .12, px: 1000, yaw: -.3, pitch: .3, sx: 1360, sy: 620, ds: 240, rot: .08 })],
+  [BT(33) - .09, buildShot({ dir: -1, d: .12, px: 1000, yaw: -.3, pitch: .3, sx: 1360, sy: 620, ds: 240, rot: .08 })],
 ]);
 })();

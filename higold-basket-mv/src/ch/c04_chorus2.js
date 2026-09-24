@@ -178,9 +178,9 @@
       });
     });
   }
-  function potDrawer(ext, lid) {
+  function potDrawer(ext, lid, carcass = true) {
     const w = 600, d = 460, h = 170, y0 = 50, P = [];
-    P.push(...boxModel(-340, -20, -20, 340, 400, 470, { sides: 'lrbk', fill: PAL.paper }));
+    if (carcass) P.push(...boxModel(-340, -20, -20, 340, 400, 470, { sides: 'lrbk', fill: PAL.paper }));
     P.push(...translate3(basketModel({ w, d, h, type: 'plain', gap: 30 }), [0, y0, ext]));
     P.push(...slideModel(-w / 2 - 14, y0 + h * .55, d, ext), ...slideModel(w / 2 + 14, y0 + h * .55, d, ext));
     P.push(lathe([-105, y0 + 4, 235 + ext], PROF.pot));
@@ -202,8 +202,8 @@
     // steam puffs out from under the lid knob on 锅 (the lid clacks up and drops back)
     const sa = t - L18[6] + .04;
     if (sa > 0 && sa < .7) { const [kx, ky] = pin(CR, [-105, 50 + 128 + lid + 44, 235 + extR]), q = sa / .7;
-      for (let k = -1; k <= 1; k++) { const pts = []; for (let u = 0; u <= 6; u++) { const f = u / 6; pts.push([kx + k * 34 + Math.sin(f * 5 + k * 2 + sa * 9) * 9 * f + k * 16 * f, ky - 18 - f * (40 + 45 * E.out(q))]); }
-        inkStroke(pts, { w: 5, col: PA, taper: [.3, .5], wob: .6, seed: 700 + k, a: .85 * (1 - q) }); } }
+      for (let k = -1; k <= 1; k++) { const pts = []; for (let u = 0; u <= 6; u++) { const f = u / 6; pts.push([kx + k * 38 + Math.sin(f * 5 + k * 2 + sa * 9) * 12 * f + k * 20 * f, ky - 16 - f * (60 + 70 * E.out(q))]); }
+        inkStroke(pts, { w: 8, col: PA, taper: [.25, .45], wob: .6, seed: 700 + k, a: .95 * (1 - q * q) }); } }
     mono('R', 1020, 150, { size: 22 }); mono('碗碟拉篮 · 锅', 1060, 150, { size: 22, a: .7 });
     X.restore();
     // ---- left half: paper panel pulled in from the left edge like a drawer front ----
@@ -318,47 +318,60 @@
   // ======================================================================================================
   // S4 · 阻尼稳稳 | 收回原位 — the drawer glides home; the lyric rides the live soft-close curve
   // ======================================================================================================
-  const L20 = LY[20].t, G = { x0: 150, step: 116, top: 350, bot: 760 }, TK0 = L20[0], TKD = 8 * .1705;
+  const L20 = LY[20].t, G = { x0: 170, step: 196, top: 205, bot: 520 }, TK0 = L20[0], TKD = 8 * .1705;
   const curveY = u => lerp(G.top, G.bot, E.soft(u));
+  // cut boards of the carcass, seen in section: the faces on the cutting plane (x = +cx) get section hatching
+  function sectionBoard(x0, y0, z0, x1, y1, z1, cx) {
+    return boxModel(x0, y0, z0, x1, y1, z1, { sides: 'lrtbfk', fill: '#1E1F23', ink: PAL.steel1, iw: 1.6, layer: 0 })
+      .map(q => q.pts.every(p => Math.abs(p[0] - cx) < .5) ? { ...q, fill: '#2A2C31', hatch: 9, ink: PAL.steel2, iw: 2.2 } : q);
+  }
   function shotClose(t, lt, dur) {
     paperBG(NI); DARK = true;
     const k = clamp((t - TK0) / TKD), ext = 420 * (1 - E.soft(k));
-    // right: the drawer (glow) closing on its own
-    const C = frameCam([0, 150, 230 + 210], .66 - .1 * clamp(lt / 1.6), .46, 1500, 650, 760, 640, { fov: 28 });
-    const prims = nightify([...boxModel(-330, -20, -20, 330, 400, 460, { sides: 'lrbk', fill: PAL.paper }), ...boxModel(-350, 400, -20, 350, 430, 490, { sides: 'lrtf', fill: PAL.paper }), ...dishDrawer(ext)]);
-    pool(1480, 880, 560, 150, .05);
-    render3(prims, C, { style: 'glow', dark: true });
-    // graph frame
+    // ---- bottom: the pot drawer from S2, now in side section, gliding home left → right (parallel to the t-axis) ----
+    const C = frameCam([0, 190, 250], 1.46 + .03 * clamp(lt / 1.6), .1, 1180, 800, 1000, 740, { fov: 24 });
+    const P = [
+      ...sectionBoard(-340, 400, -40, 340, 418, 470, 340), ...sectionBoard(-340, -20, -40, 340, -2, 470, 340), ...sectionBoard(-340, -2, -40, 340, 400, -22, 340),
+      ...sectionBoard(-360, 418, -40, 360, 448, 500, 360),                                                                     // counter slab
+      ...boxModel(-340, -2, -22, -322, 400, 470, { sides: 'r', fill: '#141417', ink: PAL.steel0, iw: 1.2, layer: 0 }),       // far side wall
+      ...potDrawer(ext, 0, false),
+    ];
+    render3(P, C, { style: 'glow', dark: true });
+    // floor line + a dimension line that shrinks as the drawer comes home
+    const fl = pin(C, [340, -20, 900]), fr = pin(C, [340, -20, -60]); line(0, fl[1] + 4, W, fr[1] + 4, 2, PA, .3);
+    const dF = pin(C, [340, -62, 480 + ext]), dH = pin(C, [340, -62, 480]);
+    if (dH[0] - dF[0] > 6) { line(dF[0], dF[1], dH[0], dH[1], 2, OR, .9); line(dF[0], dF[1] - 12, dF[0], dF[1] + 12, 2, OR, .9); }
+    line(dH[0], dH[1] - 16, dH[0], dH[1] + 16, 2.5, PA, .8);
+    mono('HOME', dH[0] + 12, dH[1] + 7, { size: 18, a: .75 });
+    mono('SECTION  A–A  ·  剖面', 90, 960, { size: 18, a: .55 });
+    // ---- top: a full-width soft-close trace; the lyric rides on it ----
     const gx1 = G.x0 + 8 * G.step, ga = E.out((t - 64.40) / .3);
     X.save(); X.globalAlpha *= ga;
-    line(G.x0 - 30, G.top - 70, G.x0 - 30, G.bot + 40, 2, PA, .5); line(G.x0 - 30, G.bot + 40, gx1 + 40, G.bot + 40, 2, PA, .5);
-    X.save(); X.setLineDash([4, 10]); line(G.x0 - 30, G.top, gx1 + 20, G.top, 1.5, PA, .25); line(G.x0 - 30, G.bot, gx1 + 20, G.bot, 1.5, PA, .25); X.restore();
+    line(G.x0 - 30, G.top - 40, G.x0 - 30, G.bot + 34, 2, PA, .45); line(G.x0 - 30, G.bot + 34, gx1 + 40, G.bot + 34, 2, PA, .45);
+    X.save(); X.setLineDash([4, 10]); line(G.x0 - 30, G.top, gx1 + 20, G.top, 1.5, PA, .22); line(G.x0 - 30, G.bot, gx1 + 20, G.bot, 1.5, PA, .22); X.restore();
     mono('OPEN', G.x0 - 44, G.top + 7, { size: 18, align: 'right', a: .7 }); mono('HOME', G.x0 - 44, G.bot + 7, { size: 18, align: 'right', a: .7 });
-    mono('SOFT-CLOSE  ·  阻尼缓冲  ·  静音', G.x0 - 30, G.top - 96, { size: 22 });
-    mono('t →', gx1 + 40, G.bot + 78, { size: 18, align: 'right', a: .6 });
-    for (let j = 0; j <= 8; j++) line(G.x0 + j * G.step, G.bot + 40, G.x0 + j * G.step, G.bot + 50, 2, PA, .5);
+    mono('t →', gx1 + 40, G.bot + 70, { size: 18, align: 'right', a: .6 });
+    for (let j = 0; j <= 8; j++) line(G.x0 + j * G.step, G.bot + 34, G.x0 + j * G.step, G.bot + 44, 2, PA, .45);
     X.restore();
-    // ghost of the full curve + the live trace
-    const n = 80, ghost = [], live = [];
+    const n = 90, ghost = [], live = [];
     for (let q = 0; q <= n; q++) { const u = q / n, p = [G.x0 + u * 8 * G.step, curveY(u)]; ghost.push(p); if (u <= k) live.push(p); }
     X.save(); X.setLineDash([3, 9]); glowPath(ghost, 1.5, PA, .3 * ga); X.restore();
     if (live.length > 1) glowPath(live, 4, PA, .95);
     const dx = G.x0 + k * 8 * G.step, dy = curveY(k);
-    line(dx, dy, dx, G.bot + 40, 1.5, OR, .5 * ga);
+    line(dx, dy, dx, G.bot + 34, 1.5, OR, .5 * ga);
     circle(dx, dy, 11, { fill: OR, a: ga }); circle(dx, dy, 20 + 8 * pulse(t, 6), { stroke: OR, w: 2, a: .5 * ga });
-    // lyric: each char drops onto the curve as the trace passes it
+    // lyric: each char lands as the trace passes its cell, sitting on the cell's highest point so the line never cuts a glyph
     const env = lyEnv(20, t, .2);
     if (env > 0) {
       LYRIC_DRAWN.add(20);
-      const chars = lyRows(20).flat(), size = 104;
+      const chars = lyRows(20).flat(), size = 120;
       chars.forEach((c, j) => {
         const kk = chK(c.ti, t, .18); if (kk <= 0) return;
-        const u = (j + .5) / 8, x = G.x0 + j * G.step + (G.step - size) / 2, y = Math.min(curveY(u), curveY(Math.min(1, (j + 1) / 8))) - 18;
+        const x = G.x0 + j * G.step + 16, y = curveY(j / 8) - 26;
         text(c.ch, x, y - (1 - E.out5(kk)) * 50, { size, font: F.smiley, col: PA, a: clamp(kk * 3) * env });
       });
     }
-    if (k >= 1) { const hk = E.back(clamp((t - TK0 - TKD) / .2)); sticker(gx1 - 40, G.bot + 118, '收好 ✓', { size: 26, k: hk, rot: -.04 }); }
-    mono('21 / 阻尼', 90, 110, { size: 18, a: .5 });
+    if (k >= 1) { const hk = E.back(clamp((t - TK0 - TKD) / .2)); sticker(gx1 + 20, G.bot - 70, '收好 ✓', { size: 28, k: hk, rot: -.04 }); }
   }
 
   // ======================================================================================================
@@ -376,6 +389,46 @@
     });
     T0.H = y; return T0;
   })();
+  // a solid side wall that occludes correctly: fill-only tiles (layer 1) so the painter's sort works locally against the
+  // basket wires, over an outline on layer 0 (the tiles are inset so the outline stays visible)
+  function solidWallX(x, y0, y1, z0, z1, nz, ny, fill, ink) {
+    const P = [{ k: 'face', layer: 0, pts: [[x, y0, z0], [x, y0, z1], [x, y1, z1], [x, y1, z0]], ink, iw: 1.6 }], e = 5, dz = (z1 - z0 - 2 * e) / nz, dy = (y1 - y0 - 2 * e) / ny;
+    for (let i = 0; i < nz; i++) for (let j = 0; j < ny; j++) {
+      const a = z0 + e + i * dz - .8, b = a + dz + 1.6, c = y0 + e + j * dy - .8, d = c + dy + 1.6;
+      P.push({ k: 'face', layer: 1, pts: [[x, c, a], [x, c, b], [x, d, b], [x, d, a]], fill });
+    }
+    return P;
+  }
+  // step zoom-outs on 满 · 满 · 一 · 篮: the shot opens tight on the basket and keeps backing off as the tower outgrows it
+  const LOADCAM = [[65.9, 820, 250], [L21[0], 1060, 400], [L21[1], 1330, 540], [L21[2], 1590, 650], [L21[3], 1860, 720]];
+  function loadCam(t) {
+    let i = 0; while (i + 1 < LOADCAM.length && t >= LOADCAM[i + 1][0]) i++;
+    if (i === 0 && t < LOADCAM[1][0]) return [LOADCAM[0][1], LOADCAM[0][2]];
+    const A = LOADCAM[Math.max(0, i - 1)], B = LOADCAM[i], k = E.out5((t - B[0]) / .22);
+    return [lerp(A[1], B[1], k), lerp(A[2], B[2], k)];
+  }
+  // punch-in medallion: a close-up of LAN's one hooked finger on the handle (paper disc, like the S6 medallion)
+  function fingerMedallion(t, cx, cy, hand) {
+    const mk = E.back(clamp((t - TPULL + .02) / .2), 2), r = 150 * mk; if (mk < .02) return;
+    const pk = E.soft((t - TPULL) / 1.1);
+    X.save(); X.setLineDash([8, 8]); const dx = hand[0] - cx, dy = hand[1] - cy, L = Math.hypot(dx, dy);
+    line(cx + dx / L * (r + 14), cy + dy / L * (r + 14), hand[0] - dx / L * 22, hand[1] - dy / L * 22, 2, PA, .7 * mk); X.restore();
+    circle(cx + 8, cy + 8, r + 12, { fill: '#000' }); circle(cx, cy, r + 12, { fill: PAL.ink }); circle(cx, cy, r, { fill: PA });
+    X.save(); X.beginPath(); X.arc(cx, cy, r - 3, 0, TAU); X.clip(); X.translate(cx, cy); X.scale(mk, mk);
+    const sx = 30 * pk;                                        // everything slides right as the drawer glides out
+    for (let q = 0; q < 4; q++) line(-170 - q * 14, 44 + q * 34, -170 - q * 14 - 40 - 110 * pk, 44 + q * 34, 5, PAL.ink, .55 * clamp(pk * 3) * (1 - pk * .5));
+    rrect(-150 + sx, 12, 330, 240, 18, { fill: PAL.steel1, stroke: PAL.ink, w: 6 });              // the drawer front, huge
+    line(-140 + sx, 24, 170 + sx, 24, 5, PAL.shine, .85);
+    rrect(-110 + sx, 58, 250, 34, 17, { fill: PAL.ink });                                          // the handle groove
+    // LAN's arm + fist + ONE hooked finger dipping into the groove
+    inkStroke([[190, -190], [110, -95], [48 + sx, -34]], { w: 26, col: PAL.ink, taper: [0, .04], wob: .6, seed: 811 });
+    circle(38 + sx, -22, 34, { fill: PAL.ink });
+    inkStroke([[30 + sx, 0], [16 + sx, 30], [4 + sx, 66], [-16 + sx, 74]], { w: 17, col: PAL.ink, taper: [0, .12], wob: .3, seed: 812 });
+    circle(-10 + sx, 72, 17, { stroke: OR, w: 5 });
+    X.restore();
+    circle(cx, cy, r + 2, { stroke: OR, w: 9 });
+    sticker(cx, cy + r + 50, '一根手指', { size: 34, k: mk, rot: -.03 });
+  }
   function shotLoad(t, lt, dur) {
     paperBG(NI); DARK = true;
     const pk = E.soft((t - TPULL) / 1.1), ext = 380 * pk;
@@ -385,7 +438,8 @@
     for (const it of TOWER) { const a = t - it.drop; if (a > 0) sway += .01 * Math.exp(-a * 4) * Math.sin(a * 15); }
     { const a = t - TPULL; if (a > 0) sway += -.06 * Math.exp(-a * 2.4) * Math.sin(a * 8.5); }
     const P = [];
-    P.push(...boxModel(-350, -10, -20, 350, 330, 480, { sides: 'lrbk', fill: PAL.paper }));
+    P.push(...boxModel(-350, -10, -20, 350, 330, 480, { sides: 'rbk', fill: PAL.paper }));
+    P.push(...solidWallX(-350, -10, 330, -20, 480, 10, 5, PAL.night2, PAL.steel2));
     P.push(...translate3(basketModel({ w: bw, d: bd, h: 160, type: 'plain', gap: 30 }), [0, y0, ext]));
     P.push(...slideModel(-bw / 2 - 14, y0 + 80, bd, ext), ...slideModel(bw / 2 + 14, y0 + 80, bd, ext));
     P.push(...doorModel(-350, 0, 350, 250, bd + 20 + ext));
@@ -400,9 +454,15 @@
     }
     tower = rotateX3(tower, sway, [0, y0, bz + ext]);
     P.push(...tower);
-    const C = frameCam([0, 720, 260], -.5, .1, 1170, 520 - 10 * clamp(lt / 2.4), 1880 - 70 * clamp(lt / 2.4), 1030, { fov: 30 });
-    pool(1170, 935, 660, 120, .07);
+    const [span, aty] = loadCam(t);
+    const C = frameCam([0, aty, 260], -.5, .1, 1170, 560 - 40 * clamp(lt / 2.4), span - 70 * clamp((t - 67.1) / 1.3), 1030, { fov: 30 });
+    { const g = pin(C, [0, 0, 300]); pool(g[0], g[1] + 20, 660 * 1860 / span, 120 * 1860 / span, .07); }
     render3(nightify(P), C, { style: 'glow', dark: true });
+    // landing impacts for the heavy pieces (pots, lids)
+    TOWER.forEach((it, i) => { const a = t - it.drop; if (a < 0 || a > .22 || ![0, 1, 2, 10].includes(i)) return;
+      const q = a / .22, c = pin(C, [it.dx, y0 + 6 + it.y, bz + it.dz + ext]), rr = it.prof.reduce((m, p) => Math.max(m, p[0]), 0), rx = pin(C, [it.dx + rr, y0 + 6 + it.y, bz + it.dz + ext])[0] - c[0];
+      for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) { const ang = sd > 0 ? -.35 - k * .35 : Math.PI + .35 + k * .35, r0 = Math.abs(rx) + 12 + q * 30;
+        line(c[0] + Math.cos(ang) * r0, c[1] + Math.sin(ang) * r0 * .6, c[0] + Math.cos(ang) * (r0 + 34 * (1 - q)), c[1] + Math.sin(ang) * (r0 + 34 * (1 - q)) * .6, 4, PA, .9 * (1 - q)); } });
     // LAN at the handle, one finger hooked
     const hx = 150, hz = bd + 20 + ext + 4;
     const hand = pin(C, [hx, 210, hz]), foot = pin(C, [hx + 120, 0, hz + 170]);
@@ -416,7 +476,8 @@
     const lx = hand[0] + 3.25 * s, face = t < TPULL ? (t < L21[4] ? 'o' : 'dot') : 'happy';
     figure(lx, foot[1], s, Pz, { who: 'lan', col: PA, dark: true, face, blush: t > TPULL + .3 ? 1 : 0, seed: 7 });
     // the one finger: a small orange hook ring at the contact
-    if (t > L21[4] && t < TUP) { const rk = E.back(clamp((t - L21[4]) / .2)); circle(hand[0], hand[1], 6 * rk, { stroke: OR, w: 3 }); circle(hand[0], hand[1], (14 + 34 * E.out(clamp((t - TPULL) / .5))) * rk, { stroke: OR, w: 2, a: .7 * (1 - clamp((t - TPULL) / .5)) }); }
+    if (t > L21[4] && t < TUP) { const rk = E.back(clamp((t - L21[4]) / .2)); circle(hand[0], hand[1], 14 * rk, { stroke: OR, w: 4 }); circle(hand[0], hand[1], (22 + 40 * E.out(clamp((t - TPULL) / .5))) * rk, { stroke: OR, w: 2.5, a: .7 * (1 - clamp((t - TPULL) / .5)) }); }
+    fingerMedallion(t, 1660, 300, hand);
     // glide streaks off the drawer front while it moves
     if (moving > .05) for (let q = 0; q < 3; q++) { const a = pin(C, [-340, 40 + q * 85, bd + 20 + ext]); line(a[0] - 16, a[1], a[0] - 16 - 150 * moving, a[1] - 40 * moving, 3, PA, .4 * moving); }
     // lyric: 满满一篮 stacks down a column (items dropping in); 也拉得动 pulls out along the floor like a drawer

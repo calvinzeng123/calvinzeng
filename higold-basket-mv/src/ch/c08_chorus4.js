@@ -3,7 +3,7 @@
 // 124.28 THE ARMY        night stage: formation + mini-crews to the horizon, the pull ripples back; echo bands; 位 = shockwave
 // 125.96 DASHBOARD       every cabinet is an OS window; each comes 在线 on a 16th; the last lands on 线
 // 128.00 SPARKLE SWEEP   the whole kitchen in steel line; a sweep of light; glints on every corner, on the beats
-// 129.90 BRAND LINE      HIGOLD / 悍高拉篮 / 全拉满 + a progress bar that IS the drawer's full extension
+// 129.90 BRAND LINE      giant HIGOLD rises behind the product family; the five units pull out one per syllable; 全拉满 = 5/5
 // 131.90 HOME            drawers glide shut (E.soft) in a wave; the last closes on 嗒 (orange); paper irises back in from the 嗒
 (() => {
   'use strict';
@@ -32,7 +32,9 @@
     return lerpPose(prev, keys[i][1], E.out5((tt - keys[i][0]) / d));
   }
   // the hook choreography: 一 reach, 拉 YANK, 就 reach (other side), 到 yank, 位 = V
-  const HOOK_KEYS = [[122.9, KP.ready], [ON[0], KP.reach], [ON[1], KP.yank], [ON[2], mirrorPose(KP.reach)], [ON[3], mirrorPose(KP.yank)], [T_WEI, KP.armsUp]];
+  // 位 = a wide, slightly low V: both hands well outside the widest hair silhouette (bob) at any scale
+  const V_POSE = pose({ ...KP.armsUp, sL: 2.2, sR: 2.2, eL: .05, eR: .05 });
+  const HOOK_KEYS = [[122.9, KP.ready], [ON[0], KP.reach], [ON[1], KP.yank], [ON[2], mirrorPose(KP.reach)], [ON[3], mirrorPose(KP.yank)], [T_WEI, V_POSE]];
   function hookPose(tt) {
     const P = keyPose(HOOK_KEYS, tt);
     if (tt > T_WEI + .25) { P.dy += .08 * Math.sin((tt - T_WEI) * 9); }
@@ -59,7 +61,8 @@
     return [hcx, hcy, headR];
   }
 
-  // Hero slam presenter for the orange frame (ink type; the hook char in paper; unsung chars as ghost outlines).
+  // Hero slam presenter for the orange frame: the complete line is solid ink from the first frame (the poster reads whole at
+  // any moment), and each char slams to paper-white on its sung onset.
   function hookSlam(i, t, o) {
     const env = lyEnv(i, t, o.hold ?? .4, .2); if (env > 0) LYRIC_DRAWN.add(i);
     const rows = lyRows(i), size = o.size, font = F.heavy, wt = 900, track = -size * .03;
@@ -67,12 +70,12 @@
       const ws = row.map(c => measure(c.ch, size, font, wt) + track), tw = ws.reduce((a, b) => a + b, 0) - track;
       let x = o.x - tw / 2; const y = o.y + r * size * 1.05;
       row.forEach((c, j) => {
-        const k = chK(c.ti, t, .16), col = (o.hi && o.hi.includes(c.ch)) ? o.hiCol : o.col;
-        if (k < 1) text(c.ch, x, y, { size, font, weight: wt, col: null, stroke: rgba(o.col, .38 * (1 - k)), sw: 3 });
+        const k = chK(c.ti, t, .16);
+        if (k < 1) text(c.ch, x, y, { size, font, weight: wt, col: o.col });
         if (k > 0) {
-          const s = lerp(1.5, 1, E.out5(k)), cx = x + ws[j] / 2, cy = y - size * .38;
+          const s = lerp(1.45, 1, E.out5(k)), cx = x + ws[j] / 2, cy = y - size * .38;
           X.save(); X.translate(cx, cy); X.scale(s, s); X.translate(-cx, -cy);
-          text(c.ch, x, y, { size, font, weight: wt, col, a: clamp(k * 4) * env });
+          text(c.ch, x, y, { size, font, weight: wt, col: o.sungCol, a: clamp(k * 4) });
           X.restore();
         }
         x += ws[j];
@@ -80,18 +83,21 @@
     });
   }
 
-  // K-pop echo bands (private lyEcho): rows of the hook scrolling in alternate directions. Centre row: each char turns
-  // solid orange (with a pop) on its sung onset across every repetition; outer rows are paper outlines.
+  // K-pop echo bands (private lyEcho): rows of the hook scrolling in alternate directions. Centre row (bigger): each char
+  // turns solid orange (with a pop) on its sung onset across every repetition; outer rows are paper outlines. The scroll is
+  // phase-locked: it decelerates and stops dead on o.lockAt with one complete copy of the centre row centred on screen.
   function echoBands(i, t, o) {
     const env = lyEnv(i, t, o.hold ?? .3, .15); if (env <= 0) return; LYRIC_DRAWN.add(i);
-    const L = LY[i], chars = [...L.text.replace(/[|，]/g, '')], size = o.size, font = F.heavy, n = o.rows ?? 3, mid = Math.floor(n / 2);
-    const ws = chars.map(c => measure(c, size, font, 900) - size * .02), gap = size * .7, unit = ws.reduce((a, b) => a + b, 0) + gap;
+    const L = LY[i], chars = [...L.text.replace(/[|，]/g, '')], font = F.heavy, n = o.rows ?? 3, mid = Math.floor(n / 2);
+    const v = o.speed ?? 150, tau = Math.max(0, o.lockAt - t), ez = .35, S = tau < ez ? v * tau * tau / (2 * ez) : v * (ez / 2 + tau - ez);
     X.save(); X.globalAlpha *= env;
     for (let r = 0; r < n; r++) {
-      const y = o.y + (r - mid) * size * (o.lead ?? 1.02), dir = r % 2 ? 1 : -1, off = mod(t * (o.speed ?? 150) * dir + r * 311, unit) - unit;
-      const solidRow = r === mid;
-      for (let x0 = off - unit; x0 < W + unit; x0 += unit) {
-        let x = x0;
+      const solidRow = r === mid, size = solidRow ? o.sizeMid : o.size;
+      const ws = chars.map(c => measure(c, size, font, 900) - size * .02), gap = size * .7, unit = ws.reduce((a, b) => a + b, 0) + gap;
+      const y = o.y + Math.sign(r - mid) * (o.sizeMid + o.size) * .5 * (o.lead ?? 1) * (r === mid ? 0 : 1), dir = r % 2 ? 1 : -1;
+      const x0 = CX - (unit - gap) / 2 + (solidRow ? 0 : unit / 2) - dir * S, off = mod(x0, unit) - unit;
+      for (let xs = off; xs < W + unit; xs += unit) {
+        let x = xs;
         chars.forEach((c, j) => {
           const k = chK(L.t[j], t, .14);
           if (solidRow && k > 0) {
@@ -99,7 +105,7 @@
             X.save(); X.translate(cx, cy); X.scale(s, s); X.translate(-cx, -cy);
             text(c, x, y, { size, font, weight: 900, col: PAL.orange });
             X.restore();
-          } else text(c, x, y, { size, font, weight: 900, col: null, stroke: rgba(PAL.paper, solidRow ? .55 : (o.outerA ?? .32)), sw: 2.5 });
+          } else text(c, x, y, { size, font, weight: 900, col: null, stroke: rgba(PAL.paper, solidRow ? .6 : (o.outerA ?? .3)), sw: 3 });
           x += ws[j];
         });
         sparkle(x + gap / 2, y - size * .36, size * .11, { col: solidRow ? PAL.orange : PAL.paper, a: solidRow ? .9 : .4, rot: t * 1.5 });
@@ -121,12 +127,12 @@
     }
     X.restore();
     zoomAt(CX, 560, z);
-    hookSlam(40, t, { x: CX, y: 650, size: 340, col: PAL.ink, hi: '拉', hiCol: PAL.paper });
+    hookSlam(40, t, { x: CX, y: 610, size: 340, col: PAL.ink, sungCol: PAL.paper });
     X.restore();
     // formation in ink along the bottom, on the hook choreography
     CREW.forEach((who, i) => {
       const k = i - 2, lead = who === 'lan', dl = .03 * Math.abs(k);
-      figure(CX + k * 175, 1040, (lead ? 20 : 18), hookPose(t - dl), { who, col: PAL.ink, fill: PAL.orange, face: lead ? 'smile' : 'dot', blush: 0, seed: i * 3 + 1 });
+      figure(CX + k * 215, 1003, (lead ? 26 : 24), hookPose(t - dl), { who, col: PAL.ink, fill: PAL.orange, face: lead ? 'smile' : 'dot', blush: 0, seed: i * 3 + 1 });
     });
     // teaser metadata in ink
     metaStrip(t, { col: PAL.ink, tl: 'FINAL CHORUS  ·  04 / 04', br: 'CH.08  ·  EVERYTHING AT ONCE' });
@@ -135,7 +141,7 @@
     const fk = snapK(t, ON[1], .16);
     if (fk > 0) { X.save(); X.strokeStyle = PAL.ink; X.lineWidth = 10; const m = lerp(0, 26, fk); X.strokeRect(m, m, W - m * 2, H - m * 2); X.restore(); }
     // the bar/beat punch: a few ink sparkles around the slam
-    for (let j = 0; j < 4; j++) sparkle(lerp(380, 1540, hash(j + 3)), lerp(240, 330, hash(j + 9)), 30 + 20 * hash(j), { k: snapK(t, ON[1] + j * .04, .25) * (1 - clamp((t - ON[1] - .35) / .3)), col: PAL.ink, rot: .2 });
+    for (let j = 0; j < 4; j++) sparkle(lerp(380, 1540, hash(j + 3)), lerp(200, 290, hash(j + 9)), 30 + 20 * hash(j), { k: snapK(t, ON[1] + j * .04, .25) * (1 - clamp((t - ON[1] - .35) / .3)), col: PAL.ink, rot: .2 });
   }
 
   // ---------- SHOT 2 · THE ARMY TO THE HORIZON (124.28 – 125.96) ----------
@@ -148,7 +154,7 @@
     X.save(); const vg = X.createRadialGradient(CX, HY, 0, CX, HY, 420); vg.addColorStop(0, rgba(PAL.orange, .42)); vg.addColorStop(1, rgba(PAL.orange, 0));
     X.fillStyle = vg; X.fillRect(CX - 440, HY - 440, 880, 880); X.restore();
     // sky: echo bands of the hook
-    echoBands(40, t, { y: 352, size: 204, rows: 3, speed: 170, lead: 1.0 });
+    echoBands(40, t, { y: 318, size: 196, sizeMid: 262, rows: 3, speed: 170, lead: .98, lockAt: T_WEI });
     // floor: perspective rays + depth lines, horizon rule
     X.save(); X.strokeStyle = PAL.paper; X.lineWidth = 1.5; X.globalAlpha = .09; X.beginPath();
     for (let k = -18; k <= 18; k++) { X.moveTo(CX, HY); X.lineTo(CX + k * 240, H + 300); }
@@ -159,8 +165,8 @@
     sparkle(CX, HY, 26 + 10 * pulse(t, 5), { col: PAL.orange, rot: 0 });
     // the army: rows of five-member mini-crews; the pull ripples back toward the horizon; a central aisle to the vanishing point
     const G = 930, M = 108, AISLE = 300;
-    for (let ri = 11; ri >= 0; ri--) {
-      const d = 1.4 * Math.pow(1.27, ri) * (1 + .3 * (1 - E.soft(clamp((lt + .12 - ri * .025) / .9)))), s = AS / d, gy = HY + AK / d, dl = (d - 1) * .055;
+    for (let ri = 11; ri >= 1; ri--) {
+      const dF = 1.4 * Math.pow(1.27, ri), d = dF * (1 + .3 * (1 - E.soft(clamp((lt + .12 - ri * .025) / .9)))), s = AS / d, gy = HY + AK / d, dl = (d - 1) * .055;
       const P = hookPose(t - dl), a = clamp(.95 - ri * .075, .16, 1), stag = ri % 2 ? G / 2 : 0;
       const groups = [];
       for (const side of [-1, 1]) for (let g = 0; g < 60; g++) {
@@ -168,7 +174,7 @@
         if (Math.abs(sx - CX) > W * .62) break;
         groups.push(wx);
       }
-      if (s >= 4.6) {
+      if (AS / dF >= 4.6) {          // renderer chosen from the settled depth: no level-of-detail pop during the dolly
         for (const wx of groups) CREW.forEach((who, m) => {
           const x = CX + (wx + (m - 2) * M) / d;
           figure(x, gy, s * (who === 'lan' ? 1.1 : 1), P, { who, col: PAL.paper, dark: true, a, face: 'dot', seed: m * 3 + ri, shadow: false, w: .23 });
@@ -192,35 +198,41 @@
     }
     // front formation (LAN centre, a little bigger)
     CREW.forEach((who, i) => {
-      const k = i - 2, lead = who === 'lan';
-      figure(CX + k * 225, FY, lead ? 30 : 27, hookPose(t - .03 * Math.abs(k)), { who, col: PAL.paper, dark: true, face: lead ? (t > T_WEI ? 'happy' : 'smile') : 'dot', blush: lead ? 1 : 0, seed: i * 3 + 1 });
+      const k = i - 2, lead = who === 'lan', P = hookPose(t - .03 * Math.abs(k)), x = CX + k * 225, sc = lead ? 30 : 27;
+      // a night knock-out halo first, so the crowd behind never tangles with the leads' lines
+      figure(x, FY, sc, P, { who, col: PAL.night, dark: true, w: .45, shadow: false, face: 'dot', seed: i * 3 + 1 });
+      figure(x, FY, sc, P, { who, col: PAL.paper, dark: true, face: lead ? (t > T_WEI ? 'happy' : 'smile') : 'dot', blush: lead ? 1 : 0, seed: i * 3 + 1 });
     });
     X.restore();
     vignette(.45);
     metaStrip(t, { col: PAL.paper, a: .75, tl: 'FINAL CHORUS  ·  04 / 04' });
   }
 
-  // ---------- 3D units (glow thumbnails for the dashboard, and the kitchen) ----------
-  function unitScene(kind, e, t) {
-    // returns {prims, cam params} in a local frame; e = 0..1 how far the unit is "out"
+  // ---------- 3D units (dashboard thumbnails + the brand-line lineup) ----------
+  // unitScene(kind, e) → {prims, at, yaw, pitch, span, foot}; e = 0..1 how far the unit is "out"; `at` never moves with e
+  function unitScene(kind, e) {
+    const box = (x0, y0, x1, y1, d) => boxModel(x0, y0, -20, x1, y1, d, { sides: 'lrtbk', fill: PAL.paper, sideFill: PAL.paper2, backFill: PAL.paper2 });
     switch (kind) {
-      case 'dish': return { prims: dishDrawer(e * 400, { plates: 6 }), at: [0, 170, 260 + e * 200], yaw: -.62, pitch: .5, span: 900 };
-      case 'spice': return { prims: spiceDrawer(e * 380), at: [0, 330, 230 + e * 190], yaw: -.75, pitch: .32, span: 820 };
+      case 'dish': return { prims: [...box(-330, -20, 330, 420, 455), ...dishDrawer(e * 400, { plates: 6 })], at: [0, 170, 360], yaw: -.62, pitch: .5, span: 1000, foot: [0, -20, 230] };
+      case 'spice': return { prims: [...box(-100, -20, 100, 620, 455), ...spiceDrawer(e * 380)], at: [0, 300, 330], yaw: -.75, pitch: .32, span: 900, foot: [0, -20, 230] };
       case 'corner': {
-        const P = [], sw = e * 1.25;
+        const P = [], sw = e * 1.6, piv = [-10, 0, 300];
         for (const y of [0, 300]) {
           P.push(...translate3(basketModel({ w: 360, d: 300, h: 90, type: 'plain', rimR: 110, midRim: false }), [180, y, 0]));
-          P.push(...rotateY3(translate3(basketModel({ w: 360, d: 300, h: 90, type: 'plain', rimR: 110, midRim: false }), [-200, y, 0]), -sw, [-10, 0, 300]));
+          P.push(...rotateY3(translate3(basketModel({ w: 360, d: 300, h: 90, type: 'plain', rimR: 110, midRim: false }), [-200, y, 0]), -sw, piv));
         }
-        P.push(...boxModel(-420, -30, -20, 420, 440, 330, { sides: 'bk', fill: PAL.paper, backFill: PAL.paper2 }));
-        return { prims: P, at: [0, 200, 250], yaw: -.35, pitch: .7, span: 1100 };
+        // the swing path, a quarter arc on the floor
+        const arc = []; for (let k = 0; k <= 16; k++) arc.push(vadd(rotY([-370, 0, -300], -1.6 * k / 16), [piv[0], -28, piv[2]]));
+        P.push({ k: 'wire', pts: arc, r: 2.2, tone: 0 });
+        P.push(...boxModel(-420, -30, -20, 420, 440, 330, { sides: 'bkl', fill: PAL.paper, backFill: PAL.paper2, sideFill: PAL.paper2 }));
+        return { prims: P, at: [-60, 200, 330], yaw: -.9, pitch: .38, span: 1250, foot: [0, -30, 150] };
       }
       case 'tall': {
-        const P = [], z = e * 360;
+        const P = [...box(-258, -10, 258, 1232, 420)], z = e * 360;
         for (let k = 0; k < 4; k++) P.push(...translate3(basketModel({ w: 420, d: 400, h: 100, type: 'plain', midRim: false }), [0, 60 + k * 330, z]));
         for (const x of [-222, 222]) P.push({ k: 'wire', pts: [[x, 40, z + 20], [x, 1160, z + 20]], r: 5, tone: 0 }, { k: 'wire', pts: [[x, 40, z + 380], [x, 1160, z + 380]], r: 5, tone: 0 });
         P.push(...doorModel(-250, 0, 250, 1220, 430 + z, { handle: false }));
-        return { prims: P, at: [0, 610, 250 + z * .5], yaw: -.8, pitch: .18, span: 1500 };
+        return { prims: P, at: [0, 610, 330], yaw: -.8, pitch: .18, span: 1500, foot: [0, -10, 215] };
       }
       case 'lift': {
         const P = [], a = e * 1.25, piv = [0, 760, 60], anc0 = [0, 840, 210];
@@ -229,12 +241,12 @@
         for (const x of [-340, 340]) P.push({ k: 'wire', pts: [[x, 700, 340], [x, 1150, 340], [x, 1150, 0]], r: 3, tone: 0 }, { k: 'wire', pts: [[x, 700, 0], [x, 700, 340]], r: 3, tone: 0 });
         P.push(...translate3(basketModel({ w: 560, d: 260, h: 150, type: 'plain' }), vadd([0, 750, 50], off)));
         for (const x of [-300, 300]) P.push({ k: 'wire', pts: [[x, piv[1], piv[2]], [x, anc[1], anc[2]]], r: 8, tone: 0 });
-        return { prims: P, at: [0, 820, 250], yaw: -.55, pitch: .15, span: 1000 };
+        return { prims: P, at: [0, 820, 250], yaw: -.55, pitch: .15, span: 1000, foot: [0, 700, 170] };
       }
     }
   }
   function drawUnit(kind, e, x, y, w, h, style, dark, t, yawOff = 0) {
-    const U = unitScene(kind, e, t);
+    const U = unitScene(kind, e);
     const C = frameCam(U.at, U.yaw + yawOff, U.pitch, x + w / 2, y + h / 2, U.span, Math.min(w, h * 1.3) * .95, { fov: 28 });
     render3(dark ? nightify(U.prims) : U.prims, C, { style, dark, lw: 1.1 });
   }
@@ -248,48 +260,50 @@
     const onAt = j => LY[41].t[4] + j * BEAT / 4;       // 都 … 线, one window per 16th; the last lands on 线
     const nOn = DASH.reduce((s, _, j) => s + (t >= onAt(j) ? 1 : 0), 0);
     // header strip
-    const hk = E.soft(clamp((t - T_DASH) / .6));
-    X.save(); X.globalAlpha = hk;
+    const cnt = `${nOn}/6`, ok6 = nOn === 6;
     text('KITCHEN.OS', gx, gy - 58, { size: 26, font: F.mono, weight: 700, col: PAL.paper, track: 3 });
     text('设备状态面板', gx + 200, gy - 58, { size: 24, font: F.sans, weight: 500, col: PAL.steel2 });
-    const cnt = `${nOn}/6`, ok = nOn === 6;
-    circle(gx + 3 * gxs - 250, gy - 67, 9, { fill: ok ? GREEN : PAL.grey });
+    circle(gx + 3 * gxs - 250, gy - 67, 9, { fill: ok6 ? GREEN : PAL.grey });
     text('在线', gx + 3 * gxs - 228, gy - 58, { size: 26, font: F.sans, weight: 700, col: PAL.paper });
-    text(cnt, gx + 3 * gxs - 26, gy - 58, { size: 34, font: F.mono, weight: 800, col: ok ? GREEN : PAL.paper, align: 'right' });
+    text(cnt, gx + 3 * gxs - 26, gy - 58, { size: 34, font: F.mono, weight: 800, col: ok6 ? GREEN : PAL.paper, align: 'right' });
     line(gx, gy - 38, gx + 3 * gxs - 26, gy - 38, 2, PAL.steel1, .6);
-    X.restore();
-    // windows glide in from the right, staggered on 32nds (E.soft), then each comes online on its 16th
+    // paper cards glide in from the right (E.soft) — already mostly home at the cut, so the first beat reads as a full panel
     DASH.forEach(([title, kind], j) => {
-      const c = j % 3, r = Math.floor(j / 3), sk = E.soft(clamp((t - (T_DASH - .12 + j * .07)) / .7));
-      const x = gx + c * gxs + (1 - sk) * (1180 - c * 120), y = gy + r * gys;
+      const c = j % 3, r = Math.floor(j / 3), sk = E.soft(clamp((t - (T_DASH - .3 + j * .04)) / .6));
+      const x = gx + c * gxs + (1 - sk) * 380, y = gy + r * gys;
       const on = t >= onAt(j), ok = snapK(t, onAt(j), .22), glide = E.soft(clamp((t - onAt(j)) / .9));
-      win(x, y, ww, wh, '', { dark: true, body: (bx, by, bw, bh) => {
-        rect(bx, by, bw, bh, PAL.night);
-        dotGrid(bx + 12, by + 12, bw - 24, bh - 70, 24, 1.2, PAL.paper, .12);
-        X.save(); X.globalAlpha *= on ? 1 : .35;
+      win(x, y, ww, wh, '', { a: clamp(sk * 2), body: (bx, by, bw, bh) => {
+        dotGrid(bx + 12, by + 12, bw - 24, bh - 70, 24, 1.2, PAL.ink, .14);
         if (kind === 'cam') {
-          const fp = move('wave', t, 2);
+          // full-alpha figure: offline = pencil grey with eyes shut, online = ink and waving beside her head
+          const fp = move('wave', t, 2), P = { ...fp, dy: 0, sR: 1.75, eR: fp.eR * .9 + .15 };
           X.save(); X.beginPath(); X.rect(bx, by, bw, bh - 58); X.clip();
-          figure(bx + bw / 2, by + 118 + 9.05 * 38, 38, { ...fp, dy: 0 }, { who: 'lan', col: PAL.paper, dark: true, face: on ? 'happy' : 'closed', blush: 1, seed: 7 });
+          figure(bx + bw / 2 - 12, by + 118 + 9.05 * 38, 38, on ? P : pose({ ...KP.stand, head: .08 }), { who: 'lan', col: on ? PAL.ink : PAL.grey, face: on ? 'happy' : 'closed', blush: on ? 1 : 0, seed: 7 });
           X.restore();
-          if (on) { circle(bx + 22, by + 22, 7, { fill: PAL.orange, a: .5 + .5 * pulse(t, 3) }); text('LIVE', bx + 36, by + 29, { size: 18, font: F.mono, weight: 700, col: PAL.paper }); }
-        } else drawUnit(kind, on ? glide : 0, bx + 6, by + 4, bw - 12, bh - 70, 'glow', true, t, Math.sin(t * .6 + j) * .08);
-        X.restore();
+          if (on) { circle(bx + 22, by + 22, 7, { fill: PAL.orange, a: .5 + .5 * pulse(t, 3) }); text('LIVE', bx + 36, by + 29, { size: 18, font: F.mono, weight: 700, col: PAL.ink }); }
+        } else { X.save(); X.globalAlpha *= on ? 1 : .4; drawUnit(kind, on ? glide : 0, bx + 6, by + 4, bw - 12, bh - 70, 'ink', false, t, Math.sin(t * .6 + j) * .08); X.restore(); }
         // status row
-        line(bx + 14, by + bh - 56, bx + bw - 14, by + bh - 56, 1.5, PAL.steel1, .5);
+        line(bx + 14, by + bh - 56, bx + bw - 14, by + bh - 56, 1.5, PAL.ink, .35);
         if (on) {
           circle(bx + 30, by + bh - 28, 10 * E.back(ok, 3), { fill: GREEN });
           circle(bx + 30, by + bh - 28, 10 + 18 * ok, { stroke: GREEN, w: 2, a: 1 - ok });
-          text('在线', bx + 52, by + bh - 18, { size: 26, font: F.sans, weight: 800, col: PAL.paper, a: ok });
-          text('ONLINE', bx + bw - 16, by + bh - 20, { size: 16, font: F.mono, weight: 600, col: GREEN, align: 'right', a: ok });
+          text('在线', bx + 52, by + bh - 18, { size: 26, font: F.sans, weight: 800, col: PAL.ink, a: ok });
+          text('ONLINE', bx + bw - 16, by + bh - 20, { size: 16, font: F.mono, weight: 700, col: '#1E9E4A', align: 'right', a: ok });
         } else {
           X.save(); X.strokeStyle = PAL.grey; X.lineWidth = 3; X.lineCap = 'round'; X.beginPath(); const a0 = t * 9; X.arc(bx + 30, by + bh - 28, 9, a0, a0 + 4.2); X.stroke(); X.restore();
           text('连接中…', bx + 52, by + bh - 18, { size: 22, font: F.sans, weight: 500, col: PAL.grey });
         }
       } });
-      // title (Chinese titles in the sans face; the chrome's own mono title is left empty)
-      if (sk > .02) text(title, x + 88, y + 28, { size: 20, font: F.sans, weight: 700, col: PAL.paper, track: 1 });
+      if (sk > .02) text(title, x + 88, y + 28, { size: 20, font: F.sans, weight: 700, col: PAL.paper, track: 1, a: clamp(sk * 2) });
     });
+    // the first beat: a cobalt system scan sweeps down the whole grid
+    const sc = clamp((t - T_DASH) / .5);
+    if (sc > 0 && sc < 1) {
+      const yy = lerp(gy - 20, gy + gys + wh + 20, E.io(sc));
+      rect(gx - 30, yy - 3, 3 * gxs + 40, 6, PAL.cobalt, .9 * (1 - sc * .5));
+      rect(gx - 30, yy - 40, 3 * gxs + 40, 40, PAL.cobalt, .12 * (1 - sc));
+      text('SCANNING…', gx - 30, yy - 12, { size: 18, font: F.mono, weight: 700, col: PAL.cobalt, a: 1 - sc });
+    }
     // all online on 线: a cobalt selection marquee snaps around the grid
     const mk = snapK(t, onAt(5), .25);
     if (mk > 0) {
@@ -299,7 +313,7 @@
       cursor(x1 - 6, y1 - 6, { s: 1.5, fill: PAL.cobalt, click: clamp((t - onAt(5)) / .4) });
     }
     // lyric, left
-    lySide(41, t, { x: 110, y: 575, size: 160, font: F.heavy, weight: 900, col: PAL.paper, numCol: PAL.steel2, hi: '在线', lead: 1.2 });
+    lySide(41, t, { x: 100, y: 575, size: 172, font: F.heavy, weight: 900, col: PAL.paper, numCol: PAL.steel2, hi: '在线', lead: 1.18 });
     metaStrip(t, { col: PAL.paper, a: .7, tl: 'FINAL CHORUS  ·  04 / 04' });
   }
 
@@ -357,14 +371,14 @@
     X.save(); const fg = X.createLinearGradient(640, 0, 900, 0); fg.addColorStop(0, rgba(PAL.steel1, 0)); fg.addColorStop(1, rgba(PAL.steel1, .5));
     X.strokeStyle = fg; X.lineWidth = 2; X.beginPath(); X.moveTo(640, fy(640)); X.lineTo(W, fy(W)); X.stroke(); X.restore();
     render3(kp, C, { style: 'glow', dark: true, lw: .85 });
-    rect(0, 0, W, H, PAL.night, .3);
+    rect(0, 0, W, H, PAL.night, .15);
     // the sweep: a slanted band of light crosses the kitchen; inside it the same line art burns brighter
-    const sx = lerp(560, 2000, E.io(clamp((lt - .02) / 1.75))), bw = 230, sl = .32;
+    const sx = lerp(900, 2050, E.io(clamp((lt - .02) / 1.75))), bw = 230, sl = .32, glowK = clamp((lt - .12) / .35);   // the glow fades up only once the band is on the kitchen
     const band = [[sx - bw - H * sl, H], [sx + bw - H * sl, H], [sx + bw, 0], [sx - bw, 0]];
     X.save(); poly(band); X.clip();
     render3(kp, C, { style: 'glow', dark: true, lw: 1.45, a: 1 });
     const nl = Math.hypot(1, sl), nx = 1 / nl, ny = sl / nl, mx = sx - CY * sl;     // gradient across the slanted band
-    const g = X.createLinearGradient(mx - nx * bw, CY - ny * bw, mx + nx * bw, CY + ny * bw); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,255,255,0.09)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    const g = X.createLinearGradient(mx - nx * bw, CY - ny * bw, mx + nx * bw, CY + ny * bw); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, `rgba(255,255,255,${(.09 * glowK).toFixed(3)})`); g.addColorStop(1, 'rgba(255,255,255,0)');
     X.globalCompositeOperation = 'lighter'; X.fillStyle = g; X.setTransform(1, 0, 0, 1, 0, 0); X.fillRect(0, 0, W, H);
     X.restore();
     // glints: every corner lights as the sweep passes it; on each beat a chosen set flares big
@@ -389,55 +403,77 @@
     metaStrip(t, { col: PAL.paper, a: .7, tl: 'FINAL CHORUS  ·  04 / 04' });
   }
 
-  // ---------- SHOT 5 · BRAND LINE (129.9 – 131.9) ----------
+  // ---------- SHOT 5 · BRAND LINE (129.9 – 131.9): the whole product family, 全拉满 ----------
+  // A giant HIGOLD rises (E.soft) from behind the stage line; in front of it the five units stand in a row like members
+  // at a line-up, and each one pulls out (its own way: slide, swing, lift-down) on a syllable. 全拉满 = 5/5 on 满.
+  let BRAND_BUF = null;
+  const LINEUP = [['调味拉篮', 'spice'], ['转角拉篮', 'corner'], ['碗碟拉篮', 'dish'], ['高柜拉篮', 'tall'], ['升降拉篮', 'lift']];
   function shotBrand(t, lt) {
     paperBG(PAL.night); DARK = true;
-    const L = LY[43].t;                                     // 悍 高 拉 篮 全 拉 满
-    // the drawer: a nudge on the first 拉, then the full pull on 全 that lands on 满
-    const p = lerp(.22 * E.soft(clamp((t - L[2]) / .5)), 1, E.soft(clamp((t - L[4]) / .62)));
-    const ext = p * 420, C = frameCam([0, 150, 230 + ext * .5], -.62 + .05 * E.io(clamp(lt / 2.2)), .5, 1420, 540, 760, 720, { fov: 28 });
-    const prims = nightify([...boxModel(-330, -20, -20, 330, 400, 460, { sides: 'lrbk', fill: PAL.paper, sideFill: PAL.paper2, backFill: PAL.paper2 }),
-      ...boxModel(-350, 400, -20, 350, 430, 490, { sides: 'lrtf', fill: PAL.paper, frontFill: PAL.paper2 }), ...dishDrawer(ext)]);
-    render3(prims, C, { style: 'steel', dark: true, shine: lerp(-500, 500, frac(lt * .6)) });
-    // product truth caption once fully out
-    const fk = clamp((t - L[6]) / .5);
-    if (fk > 0) text('全拉出  ·  FULL EXTENSION  ·  阻尼缓冲', 110, 985, { size: 22, font: F.mono, weight: 600, col: PAL.steel2, track: 2, a: E.out(fk) });
-    // brand lockup, left
-    const bk = E.soft(clamp((t - T_BRAND + .05) / .6));
-    X.save(); X.beginPath(); X.rect(0, 0, 1060, H); X.clip();
-    text('HIGOLD', 100 - (1 - bk) * 800, 380, { size: 300, font: F.anton, col: PAL.paper, track: 6 });
-    X.restore();
-    // lyric: row 1 悍高拉篮 (big), row 2 全拉满 (orange) — per-char slam
-    const rows = lyRows(43), env = lyEnv(43, t, .25, .2);
+    const L = LY[43].t, FLOOR = 792;                        // 悍 高 拉 篮 全 拉 满
+    const PT = [L[1], L[2], L[3], L[4], L[5] - BEAT / 4 + .02];      // the fifth pull is timed to seat on 满
+    const ek = PT.map(a => E.soft(clamp((t - a) / .5))), p = ek.reduce((a, b) => a + b, 0) / 5;
+    // giant wordmark geometry (whole word rises from behind the stage line with E.soft)
+    X.save(); X.font = `400 100px ${F.anton}`; X.letterSpacing = '2px'; const m100 = X.measureText('HIGOLD'); X.restore();
+    const hsz = 100 * 1720 / m100.width, asc = m100.actualBoundingBoxAscent * hsz / 100, base = 96 + asc, hk = E.soft(clamp((t - T_BRAND + .14) / .8));
+    const wordmark = () => { X.save(); X.beginPath(); X.rect(0, 0, W, base + 2); X.clip();
+      text('HIGOLD', CX, base + (1 - hk) * (asc + 20), { size: hsz, font: F.anton, col: PAL.paper, align: 'center', track: 2 * hsz / 100 }); X.restore(); };
+    // stage line + a faint floor glow
+    rect(60, FLOOR, W - 120, 2, PAL.steel2, .5);
+    X.save(); const fg = X.createLinearGradient(0, FLOOR, 0, FLOOR + 110); fg.addColorStop(0, rgba(PAL.steel2, .10)); fg.addColorStop(1, rgba(PAL.steel2, 0)); X.fillStyle = fg; X.fillRect(60, FLOOR, W - 120, 110); X.restore();
+    // the line-up: glow line art on the night; where a unit crosses the wordmark it is re-drawn as ink line art INSIDE
+    // the letters (an offscreen letter layer, units composited source-atop), so HIGOLD stays solid and every unit stays whole
+    const units = LINEUP.map(([name, kind], j) => {
+      const U0 = unitScene(kind, 0), U = unitScene(kind, ek[j]), slot = 205 + j * 377, yaw = .55 - .05 * E.io(clamp(lt / 2)), pitch = .22;
+      const px = 420 * U0.span / 1000, C0 = frameCam(U0.at, yaw, pitch, 0, 0, U0.span, px, { fov: 26 }), f = C0.project(U0.foot);
+      const lift = kind === 'lift' ? 250 : 0;
+      return { name, j, slot, prims: U.prims, C: frameCam(U0.at, yaw, pitch, slot - f[0], FLOOR - lift - f[1], U0.span, px, { fov: 26 }) };
+    });
+    for (const u of units) render3(nightify(u.prims), u.C, { style: 'glow', dark: true, lw: 1.05 });
+    if (!BRAND_BUF) { BRAND_BUF = document.createElement('canvas'); BRAND_BUF.width = W; BRAND_BUF.height = H; }
+    const g = BRAND_BUF.getContext('2d'), prevX = X; g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
+    X = g; wordmark(); g.globalCompositeOperation = 'source-atop'; for (const u of units) render3(u.prims, u.C, { style: 'ink', lw: 1.05 }); X = prevX;
+    X.save(); X.setTransform(1, 0, 0, 1, 0, 0); X.drawImage(BRAND_BUF, 0, 0); X.restore();
+    units.forEach(({ name, j, slot }) => {
+      // member tag
+      const done = ek[j] > .9, tk = snapK(t, PT[j], .2);
+      text(String(j + 1).padStart(2, '0'), slot - 70, FLOOR + 42, { size: 20, font: F.mono, weight: 800, col: PAL.orange });
+      text(name, slot - 36, FLOOR + 42, { size: 22, font: F.sans, weight: 700, col: PAL.paper, a: .55 + .45 * tk });
+      if (done) sparkle(slot + 92, FLOOR + 34, 11 * E.back(clamp((ek[j] - .9) * 10), 2), { col: PAL.orange });
+    });
+    // lyric strip: 悍高拉篮，全拉满 — one row, per-char slam; 全拉满 in orange
+    const rows = lyRows(43), env = lyEnv(43, t, .25, .2), sz = 118;
     if (env > 0) {
       LYRIC_DRAWN.add(43);
-      const sizes = [170, 170], ys = [600, 800];
+      let x = 104;
       rows.forEach((row, r) => {
-        let x = 110;
         row.forEach(c => {
-          const k = chK(c.ti, t, .16), sz = sizes[r], w = measure(c.ch, sz, F.heavy, 900) - sz * .02;
+          const k = chK(c.ti, t, .16), w = measure(c.ch, sz, F.heavy, 900) - sz * .02;
           if (k > 0) {
-            const s = lerp(1.4, 1, E.out5(k)), cx = x + w / 2, cy = ys[r] - sz * .38;
+            const s = lerp(1.45, 1, E.out5(k)), cx = x + w / 2, cy = 1000 - sz * .38;
             X.save(); X.translate(cx, cy); X.scale(s, s); X.translate(-cx, -cy);
-            text(c.ch, x, ys[r], { size: sz, font: F.heavy, weight: 900, col: r === 1 ? PAL.orange : PAL.paper, a: clamp(k * 4) * env });
+            text(c.ch, x, 1000, { size: sz, font: F.heavy, weight: 900, col: r === 1 ? PAL.orange : PAL.paper, a: clamp(k * 4) * env });
             X.restore();
           }
           x += w;
         });
+        if (r === 0) x += sz * .42;
       });
     }
-    // the progress bar: 拉满 — it IS the drawer's extension
-    const bx = 110, by = 862, bw = 920, bh = 64, nb = 24, cell = (bw - 10) / nb, fill = Math.floor(p * nb + 1e-6);
+    // progress: 5 units → 拉满 (label and fill both derive from the same cell count)
+    const bx = 1130, by = 952, bw = 690, bh = 54, nb = 20, cell = (bw - 10) / nb, fill = Math.round(p * nb), full = fill >= nb, fk = snapK(t, L[6], .3);
     X.save(); X.globalAlpha *= clamp(lt * 4);
-    rect(bx + 8, by + 8, bw, bh, '#000', .9); rect(bx, by, bw, bh, PAL.night2); X.strokeStyle = PAL.paper; X.lineWidth = 3; X.strokeRect(bx, by, bw, bh);
-    for (let i = 0; i < fill; i++) rect(bx + 7 + i * cell, by + 8, cell - 5, bh - 16, i === nb - 1 ? PAL.shine : PAL.orange);
-        text(String(Math.round(p * 100)).padStart(3, ' ') + '%', bx + bw, by - 16, { size: 26, font: F.mono, weight: 800, col: PAL.paper, align: 'right' });
-    text('拉满进度  ·  PULL-OUT', bx, by - 16, { size: 20, font: F.mono, weight: 600, col: PAL.steel2, track: 2 });
+    rect(bx, by, bw, bh, PAL.night2); X.strokeStyle = PAL.paper; X.lineWidth = 3; X.strokeRect(bx, by, bw, bh);
+    for (let i = 0; i < fill; i++) rect(bx + 7 + i * cell, by + 8, cell - 5, bh - 16, PAL.orange);
+    if (full) rect(bx + 3, by + 3, bw - 6, bh - 6, PAL.shine, .8 * (1 - fk));           // one white flash as it completes
+    text('PULL-OUT', bx, by - 14, { size: 20, font: F.mono, weight: 700, col: PAL.steel2, track: 3 });
+    text(`${Math.round(fill / nb * 5)}/5`, bx + bw / 2, by - 14, { size: 20, font: F.mono, weight: 700, col: PAL.steel2, align: 'center' });
+    text(Math.round(fill / nb * 100) + '%', bx + bw, by - 14, { size: 24, font: F.mono, weight: 800, col: PAL.paper, align: 'right' });
     X.restore();
-    // stamp on 满
-    const sk = snapK(t, L[6] + .05, .25);
-    if (sk > 0) sticker(800, 742, '拉满 ✓', { k: sk, size: 38, rot: -.08, fill: PAL.orange });
-    text(`${String(Math.floor(t / 60)).padStart(2, '0')}:${(t % 60).toFixed(2).padStart(5, '0')}`, W - 64, 70, { size: 22, font: F.mono, weight: 600, col: PAL.paper, a: .7, align: 'right' });
+    // the one extra 拉满: a stamp on the bar, on 满
+    const sk = snapK(t, L[6] + .04, .25);
+    if (sk > 0) sticker(bx + bw - 70, by - 4, '拉满 ✓', { k: sk, size: 34, rot: -.1, fill: PAL.orange });
+    text(`${String(Math.floor(t / 60)).padStart(2, '0')}:${(t % 60).toFixed(2).padStart(5, '0')}`, W - 64, 56, { size: 20, font: F.mono, weight: 600, col: PAL.paper, a: .6, align: 'right' });
   }
 
   // ---------- SHOT 6 · HOME (131.9 – 135.9): the wave of closing drawers, 嗒, night → paper ----------
@@ -447,7 +483,7 @@
   const EX0 = [.85, .9, .75, .55, .95, .6, 1];
   function homeCam(t) {
     const k = E.out(clamp((t - T_HOME) / 3.4));
-    return frameCam([lerp(-250, -420, k), lerp(480, 1000, k), lerp(700, 460, k)], lerp(.42, .16, k), lerp(.42, .1, k), lerp(1330, 1235, k), lerp(560, 575, k), 2600, lerp(1650, 930, k), { fov: 30 });
+    return frameCam([lerp(-300, -420, k), lerp(560, 1000, k), lerp(660, 460, k)], lerp(.4, .16, k), lerp(.38, .1, k), lerp(1300, 1235, k), lerp(575, 575, k), 2600, lerp(1420, 930, k) + 26 * (t - T_HOME), { fov: 30 });
   }
   function homeScene(t, mode) {
     const night = mode === 'night', ink = night ? PAL.paper : PAL.ink;
@@ -462,7 +498,10 @@
     CREW.forEach((who, i) => {
       const k = i - 2, lead = who === 'lan', arrive = E.soft(clamp((t - T_HOME - .15 - Math.abs(k) * .1) / 1.3));
       const wx = lerp([-930, -720, -330, 80, 440][i], -330 + k * 150, arrive), q = C.project([wx, 720, 400]), sc = q[3] * 29;
-      const P = lead && t > 134.3 ? move('wave', t) : move('sway', t, i);
+      let P = lead && t > 134.3 ? move('wave', t) : move('sway', t, i);
+      // 天: the whole crew lands one last little pull, with a hop
+      const tk = t - LY[44].t[8];
+      if (tk > -.05) { P = lerpPose(P, i % 2 ? mirrorPose(KP.yank) : KP.yank, E.out5((tk + .05) / .16)); P.dy += .55 * Math.sin(clamp(tk / .32) * Math.PI) * (tk > 0 ? 1 : 0); }
       figure(q[0], q[1], sc * (lead ? 1.12 : 1), P, { who, col: ink, dark: night, face: t > T_DA ? 'happy' : (lead ? 'smile' : 'dot'), blush: lead ? 1 : 0, seed: i * 3 + 1, w: .24 });
     });
     // 嗒: the orange mark at the last drawer's leading edge
@@ -476,7 +515,11 @@
     }
     // lyric: quiet serif on the left
     lySide(44, t, { x: 120, y: 470, size: 118, font: F.serif, weight: 900, col: ink, numCol: night ? PAL.steel2 : PAL.ink2, hi: '嗒', lead: 1.3, hold: .3 });
-    metaStrip(t, { col: ink, a: .6, tl: 'FINAL CHORUS  ·  04 / 04' });
+    // teaser corners; the timecode waits until the opening push has cleared the lift-down basket from that corner
+    text('HIGOLD 悍高', 64, 70, { size: 24, font: F.sans, weight: 700, col: ink, a: .6, track: 2 });
+    text('FINAL CHORUS  ·  04 / 04', 64, 102, { size: 18, font: F.mono, weight: 500, col: ink, a: .6, track: 1 });
+    const tca = .6 * clamp((t - T_HOME - .55) / .25);
+    if (tca > 0) text(`${String(Math.floor(t / 60)).padStart(2, '0')}:${(t % 60).toFixed(2).padStart(5, '0')}`, W - 64, 70, { size: 22, font: F.mono, weight: 600, col: ink, a: tca, align: 'right' });
     return dp;
   }
   function shotHome(t, lt) {
