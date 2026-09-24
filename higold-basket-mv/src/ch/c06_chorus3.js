@@ -5,7 +5,7 @@
 (() => {
   'use strict';
   const BT = beatT;
-  const T_HOOK = 95.4, T_WIN = BT(142.5), T_GRID = BT(145), T_PLAN = BT(147), T_ELEV = BT(150), T_AXO = BT(153), T_END = 109.4;
+  const T_HOOK = 95.4, T_WIN = BT(142.5), T_GRID = LY[30].t[0] - .04, T_PLAN = BT(147), T_ELEV = BT(150), T_AXO = BT(153), T_END = 109.4;
 
   // ---------- small private helpers ----------
   const ln = (x1, y1, x2, y2, w = 1.5, col = PAL.ink, a = 1) => line(x1, y1, x2, y2, w, col, a, 'butt');
@@ -71,7 +71,7 @@
         }
         x += ws[j] + tr;
       });
-      if (o.slit) { const sl = o.slit === true ? 1.5 : o.slit, ex = size * .25; ln(x0 - ex, y + size * .19, x0 + tw + ex, y + size * .19, sl, PAL.ink, .85); }
+      if (o.slit) { const sl = o.slit === true ? 1.5 : o.slit, ex = size * .12; ln(x0 - ex, y + size * .19, x0 + tw + ex, y + size * .19, sl, PAL.ink, o.slitA ?? .85); }
       out.push({ x0, y, w: tw, size, seen, n: row.length, ws, tr });
     });
     X.restore();
@@ -85,60 +85,62 @@
   // the tug: elbow drawn back, forearm level, so the hand keeps the handle's height as it travels back to the hip
   const YANK = pose({ lean: -.18, head: -.1, dy: -.06, sR: .05, eR: 1.62, sL: .12, eL: .18, hL: .2, kL: .18, hR: .12, kR: .08 });
   const PINYIN = ['yī', 'lā', 'jiù', 'dào', 'wèi'];
-  function lanPull(t) {
-    const reachK = E.io((t - 95.46) / .84), walkK = E.io((t - 96.33) / .72), yankK = E.soft((t - 96.74) / .62);
-    const st = Math.sin(walkK * Math.PI * 2), sp = Math.max(0, st), sn = Math.max(0, -st);
+  // walk = px LAN walks back while holding the handle (sized so the basket ends fully out of the carcass)
+  function lanPull(t, walk) {
+    const reachK = E.io((t - 95.46) / .84), walkK = E.io((t - 96.3) / .8), yankK = E.soft((t - 96.74) / .6);
+    const st = Math.sin(walkK * Math.PI * 3), sp = Math.max(0, st), sn = Math.max(0, -st);     // three small steps back
     let P = lerpPose(pose({ sL: .16, sR: .16 }), REACH, reachK);
     P = { ...P, lean: P.lean - .14 * walkK, hL: P.hL + .22 * sp, kL: P.kL + .45 * sp, hR: P.hR + .22 * sn, kR: P.kR + .45 * sn, dy: .05 * Math.abs(st) };
     P = lerpPose(P, YANK, yankK);
-    return { P, dx: -66 * walkK, grip: reachK > .999 };
+    return { P, dx: -walk * walkK, grip: reachK > .999 };
   }
   function hookVignette(t) {
-    const gy = 905, s = 20, LX0 = CX - 60;
-    const L = lanPull(t), LX = LX0 + L.dx;
+    const gy = 956, s = 32, LX0 = CX - 10, depth = 250;
     // probe the hand geometry (invisible) so the handle sits exactly in LAN's hand
     const hr0 = figure(LX0, gy, s, REACH, { who: 'lan', a: 0, shadow: false }).handR;
+    const hy0 = figure(LX0, gy, s, YANK, { who: 'lan', a: 0, shadow: false }).handR;
+    const walk = Math.max(0, depth - 6 - (hr0[0] - hy0[0]));
+    const L = lanPull(t, walk), LX = LX0 + L.dx;
     const hr = figure(LX, gy, s, L.P, { who: 'lan', a: 0, shadow: false }).handR;
-    const FX = hr0[0] + 7, hy = hr0[1], ext = L.grip ? Math.max(0, hr0[0] - hr[0]) : 0;
-    const top = hy - 16, depth = 176, bot = gy - 16;
+    const FX = hr0[0] + 9, hy = hr0[1], ext = L.grip ? Math.max(0, hr0[0] - hr[0]) : 0;
+    const top = hy - 24, bot = gy - 22, fx = FX - ext, bw = depth - 20;
     // ground: one rule + a few architectural ground hatches
-    ln(CX - 340, gy, CX + 340, gy, 2, PAL.ink, .9);
-    for (let i = 0; i < 23; i++) { const x = CX - 326 + i * 30; ln(x, gy + 3, x - 10, gy + 13, 1, PAL.ink, .35); }
+    ln(CX - 520, gy, CX + 520, gy, 2.2, PAL.ink, .9);
+    for (let i = 0; i < 35; i++) { const x = CX - 506 + i * 30; ln(x, gy + 3, x - 10, gy + 13, 1, PAL.ink, .35); }
     // the basket drawer in side elevation (drawn first; the carcass side panel hides the part still inside)
-    const fx = FX - ext;
-    X.save(); X.strokeStyle = PAL.ink; X.lineCap = 'butt'; X.lineWidth = 1; X.globalAlpha *= .7; X.beginPath();
-    for (let x = fx + 12; x < fx + depth - 12; x += 9) { X.moveTo(x, top + 18); X.lineTo(x, bot - 8); }
+    X.save(); X.strokeStyle = PAL.ink; X.lineCap = 'butt'; X.lineWidth = 1.3; X.globalAlpha *= .7; X.beginPath();
+    for (let x = fx + 16; x < fx + bw - 4; x += 12) { X.moveTo(x, top + 26); X.lineTo(x, bot - 10); }
     X.stroke(); X.restore();
-    ln(fx + 4, top + 18, fx + depth - 14, top + 18, 2.2); ln(fx + 4, bot - 8, fx + depth - 14, bot - 8, 2); ln(fx + depth - 14, top + 18, fx + depth - 14, bot - 8, 2);
-    ln(fx + 4, (top + bot) / 2 + 6, fx + depth - 14, (top + bot) / 2 + 6, 1.2, PAL.ink, .8);
+    ln(fx + 4, top + 26, fx + bw, top + 26, 3); ln(fx + 4, bot - 10, fx + bw, bot - 10, 2.6); ln(fx + bw, top + 26, fx + bw, bot - 10, 2.6);
+    ln(fx + 4, (top + bot) / 2 + 8, fx + bw, (top + bot) / 2 + 8, 1.5, PAL.ink, .8);
     // carcass (side panel, opaque), counter slab, toe-kick
-    rect(FX, top - 2, depth + 8, gy - top + 2, PAL.paper);
-    stroke(() => { X.rect(FX, top - 2, depth + 8, gy - top + 2); }, 2.2);
-    rect(FX - 8, top - 12, depth + 20, 10, PAL.ink);
-    rect(FX + 6, gy - 14, depth - 4, 14, PAL.paper); ln(FX + 6, gy - 14, FX + 6, gy, 1.6); ln(FX + 6, gy - 14, FX + depth + 8, gy - 14, 1.6);
+    rect(FX, top - 3, depth + 10, gy - top + 3, PAL.paper);
+    stroke(() => { X.rect(FX, top - 3, depth + 10, gy - top + 3); }, 2.8);
+    rect(FX - 12, top - 17, depth + 28, 14, PAL.ink);
+    rect(FX + 8, gy - 20, depth - 4, 20, PAL.paper); ln(FX + 8, gy - 20, FX + 8, gy, 2); ln(FX + 8, gy - 20, FX + depth + 10, gy - 20, 2);
     // rail (telescoping) visible between the front and the carcass
-    if (ext > 12) ln(fx + 10, (top + bot) / 2 + 20, FX, (top + bot) / 2 + 20, 1.5, PAL.steel0);
+    if (ext > 16) ln(fx + 12, (top + bot) / 2 + 28, FX, (top + bot) / 2 + 28, 2, PAL.steel0);
     // drawer front + bar handle
-    rect(fx - 9, top + 2, 9, bot - top - 2, PAL.paper); stroke(() => X.rect(fx - 9, top + 2, 9, bot - top - 2), 2.2);
-    stroke(() => { X.moveTo(fx - 9, hy - 7); X.lineTo(fx - 17, hy - 7); X.lineTo(fx - 17, hy + 7); X.lineTo(fx - 9, hy + 7); }, 2.4);
-    // a quiet dimension under the floor once the drawer has travelled: 全拉出, no numbers
-    if (ext > 30) {
-      const a = clamp((ext - 30) / 50), yy = gy + 40;
-      ln(fx - 9, yy, FX, yy, 1.3, PAL.ink, .7 * a); for (const x of [fx - 9, FX]) ln(x - 5, yy + 5, x + 5, yy - 5, 1.3, PAL.ink, .7 * a);
-      mono('全拉出', (fx - 9 + FX) / 2, yy + 26, { size: 13, align: 'center', a });
+    rect(fx - 13, top + 3, 13, bot - top - 3, PAL.paper); stroke(() => X.rect(fx - 13, top + 3, 13, bot - top - 3), 2.8);
+    stroke(() => { X.moveTo(fx - 13, hy - 10); X.lineTo(fx - 24, hy - 10); X.lineTo(fx - 24, hy + 10); X.lineTo(fx - 13, hy + 10); }, 3);
+    // 全拉出 — only once the basket has fully cleared the carcass (no numbers)
+    const a = clamp((ext - (bw - 24)) / 30);
+    if (a > 0) {
+      const yy = gy + 40;
+      ln(fx - 13, yy, FX, yy, 1.4, PAL.ink, .75 * a); for (const x of [fx - 13, FX]) ln(x - 6, yy + 6, x + 6, yy - 6, 1.4, PAL.ink, .75 * a);
+      mono('全拉出', (fx - 13 + FX) / 2, yy + 28, { size: 15, align: 'center', a });
     }
     // LAN
-    figure(LX, gy, s, L.P, { who: 'lan', face: t > 97.02 ? 'happy' : 'closed', blush: .9, w: .22, seed: 31 });
+    figure(LX, gy, s, L.P, { who: 'lan', face: t > 97.02 ? 'happy' : 'closed', blush: .9, w: .21, seed: 31 });
   }
   function shotHook(t, lt) {
     paperBG();
     const z = 1 + .03 * E.io((t - 95.24) / 2.3);
     cam(CX, CY + 40, z);
-    X.translate(0, 40);
     // the slit draws itself from the centre, then each character rises out of it
-    const sk = E.soft((t - 95.3) / .9), sy = 470 + 236 * .19;
+    const sk = E.soft((t - 95.3) / .9), ty = 400, sy = ty + 236 * .19;
     ln(CX - 720 * sk, sy, CX + 720 * sk, sy, 1.5, PAL.ink, .85);
-    const R = lyType(28, t, { x: CX, y: 470, size: 236, weight: 300, align: 'center', track: 46, hi: '拉', dur: .55 });
+    const R = lyType(28, t, { x: CX, y: ty, size: 236, weight: 300, align: 'center', track: 46, hi: '拉', dur: .55 });
     // pinyin caption under each syllable (the same line, whispered)
     if (R) {
       const r = R[0]; let x = r.x0;
@@ -147,9 +149,8 @@
         if (k > 0) text(PINYIN[j], cx, sy + 62, { size: 38, font: F.serifI, col: PAL.ink2, align: 'center', a: E.out(k) });
         x += r.ws[j] + r.tr;
       });
-      mono('CHORUS 03 — BREAKDOWN', CX, sy - 300, { align: 'center', size: 15, a: sk });
+      mono('CHORUS 03 — BREAKDOWN', CX, sy - 282, { align: 'center', size: 15, a: sk });
     }
-    X.translate(0, -40);
     hookVignette(t);
     camEnd();
     sheet(t, 0);
@@ -164,7 +165,7 @@
     const wx = 450, wy = 196, ww = 1020, wh = 640;
     cam(CX, CY, 1 + .018 * E.io(lt / 1.9));
     win(wx, wy, ww, wh, on ? '收纳焦虑.exe  —  已下线' : '收纳焦虑.exe', {
-      k: open, body: (bx, by, bw, bh) => {
+      k: open, btn: on ? PAL.grey : PAL.orange, body: (bx, by, bw, bh) => {
         const L0 = bx + 64, R0 = bx + bw - 64;
         mono('PROCESS  ·  收纳焦虑', L0, by + 48, { col: PAL.ink2 });
         // status: a spinner while running, a hollow ring when offline
@@ -175,7 +176,7 @@
         } else { circle(R0 - 150, by + 42, 8, { stroke: PAL.ink2, w: 2 }); mono('OFFLINE', R0, by + 48, { align: 'right' }); }
         ln(L0, by + 70, R0, by + 70, 1.2, PAL.ink, .3);
         // the lyric is the window's content: row 1 = the process, row 2 = its new status
-        const rows = lyType(29, t, { x: L0, y: by + 236, size: 134, weight: 900, lead: 168, dur: .32, hold: .4, cols: [on ? mixCol(PAL.ink, PAL.paper, .55 * off) : PAL.ink, PAL.ink] });
+        const rows = lyType(29, t, { x: L0, y: by + 236, size: 134, weight: 900, lead: 168, dur: .25, hold: .4, slit: 1, slitA: .22, cols: [on ? mixCol(PAL.ink, PAL.paper, .55 * off) : PAL.ink, PAL.ink] });
         if (rows && on) { const r0 = rows[0], k = E.out(clamp((t - click) / .3)); ln(r0.x0 - 10, r0.y - r0.size * .36, r0.x0 - 10 + (r0.w + 20) * k, r0.y - r0.size * .36, 5, PAL.ink); }
         // anxiety trace: jagged, pulsing on the beat → flatline after the click
         const ty = by + 538, x0 = L0, x1 = R0, amp = 38 * (.55 + .45 * pulse(t, 4)) * (1 - off);
@@ -191,7 +192,6 @@
         }, 2.2, PAL.ink);
       }
     });
-    if (on && open >= 1) rect(wx + 14, wy + 13, 14, 14, PAL.grey);      // the orange close button goes grey once pressed
     // cursor: glides in with the drawer curve, presses the close button on the downbeat
     if (t > 97.55) {
       const g = E.soft((t - 97.6) / .8), cx = lerp(1640, wx + 21, g), cy = lerp(980, wy + 20, g);
@@ -223,7 +223,7 @@
   const GRID_ROWS = [['plate', 'bowl', 'cup', 'lid', 'jar'], null, ['chop', 'spoon', 'spatula', 'ladle', 'bottle']];
   function shotGrid(t, lt) {
     paperBG();
-    const cs = 196, gx = CX - cs * 2.5, gy = 262, lock = BT(146);
+    const cs = 196, gx = CX - cs * 2.5, gy = 262, lock = LY[30].t[4] + .1;
     cam(CX, CY, 1 + .014 * E.io(lt / 1.6));
     // the grid (pencil hairlines) draws itself first
     const gk = E.soft((t - T_GRID + .06) / .55);
@@ -237,11 +237,20 @@
     let n = 0;
     [0, 2].forEach(r => GRID_ROWS[r].forEach((name, c) => {
       const id = r * 5 + c, ord = Math.floor(hash(id * 3.7 + 1) * 1000) % 10, j = n++;
-      const ts = T_GRID + .1 + ((ord + j) % 10) * .062, k = E.out5((t - ts) / .17);
+      const ts = BT(145) + .1 + ((ord + j) % 10) * .062, k = E.out5((t - ts) / .17);
       const dx = (hash(id * 3.1) - .5) * 120 + Math.sin(t * 1.4 + id) * 3, dy = (hash(id * 7.7) - .5) * 96 + Math.cos(t * 1.1 + id) * 3, rot = (hash(id * 1.9) - .5) * 1.4;
       const x = gx + (c + .5) * cs + dx * (1 - k), y = gy + (r + .5) * cs + dy * (1 - k);
       X.save(); X.translate(x, y); X.rotate(rot * (1 - k)); X.globalAlpha *= .55 + .45 * k; OB[name](); X.restore();
     }));
+    // smart guides (the computer approves): cobalt alignment lines flash once 喜 has landed (under the glyphs; none through the lyric row)
+    if (t > lock) {
+      const a = 1 - clamp((t - lock) / .24), gl = E.out((t - lock) / .18);
+      X.save(); X.strokeStyle = PAL.cobalt; X.lineWidth = 1.6; X.globalAlpha *= .9 * a; X.beginPath();
+      for (const j of [0, 2]) { const y = gy + (j + .5) * cs; X.moveTo(CX - (cs * 2.5 + 70) * gl, y); X.lineTo(CX + (cs * 2.5 + 70) * gl, y); }
+      for (let i = 0; i < 5; i++) { const x = gx + (i + .5) * cs; X.moveTo(x, gy + cs * 1.5 - (cs * 1.5 + 50) * gl); X.lineTo(x, gy + cs * 1.5 + (cs * 1.5 + 50) * gl); }
+      X.stroke(); X.restore();
+      for (let i = 0; i < 5; i++) for (const j of [0, 2]) { const x = gx + (i + .5) * cs, y = gy + (j + .5) * cs; rect(x - 3.5, y - 3.5, 7, 7, PAL.cobalt, .9 * a); }
+    }
     // the lyric: the grid's middle row, one character per cell, each snapping in on its onset
     const env = lyEnv(30, t, .3, .25);
     if (env > 0) {
@@ -255,15 +264,6 @@
         else text(c.ch, 0, size * .36, { size, font: F.serif, weight: 900, col: PAL.ink, align: 'center', a: .35 + .65 * k });
         X.restore();
       });
-    }
-    // smart guides (the computer approves): cobalt alignment lines flash once everything is locked
-    if (t > lock) {
-      const a = 1 - clamp((t - lock) / .55), gl = E.out((t - lock) / .18);
-      X.save(); X.strokeStyle = PAL.cobalt; X.lineWidth = 1.6; X.globalAlpha *= .9 * a; X.beginPath();
-      for (let j = 0; j < 3; j++) { const y = gy + (j + .5) * cs; X.moveTo(CX - (cs * 2.5 + 70) * gl, y); X.lineTo(CX + (cs * 2.5 + 70) * gl, y); }
-      for (let i = 0; i < 5; i++) { const x = gx + (i + .5) * cs; X.moveTo(x, gy + cs * 1.5 - (cs * 1.5 + 50) * gl); X.lineTo(x, gy + cs * 1.5 + (cs * 1.5 + 50) * gl); }
-      X.stroke(); X.restore();
-      for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) { const x = gx + (i + .5) * cs, y = gy + (j + .5) * cs; rect(x - 3.5, y - 3.5, 7, 7, PAL.cobalt, .9 * a); }
     }
     mono('ALIGN: CENTRE   ·   SPACING: EQUAL   ·   ROTATION: 0°', CX, gy + 3 * cs + 58, { align: 'center', size: 14, a: clamp((t - lock) / .3) });
     // one orange sticker on 喜
@@ -348,7 +348,7 @@
       if (k > 0) { tag(x0 + 16, y0 - 8, L, k); text(cn, x0 + 44, y0, { size: 24, font: F.serif, weight: 700, a: clamp(k * 2) }); mono(en, x0 + 46, y0 + 22, { size: 11, a: clamp(k * 2), col: PAL.grey }); }
     });
     // lyric: the drawing title (left), with a thick–thin rule like a title block
-    const R = lyType(31, t, { x: 124, y: 440, size: 118, weight: 900, lead: 148, dur: .4 });
+    const R = lyType(31, t, { x: 124, y: 440, size: 118, weight: 900, lead: 148, dur: .32, slit: 1, slitA: .3 });
     if (R) {
       const y = R[1].y + 54, k = E.soft((t - T_PLAN) / .8);
       ln(124, y, 124 + 470 * k, y, 4, PAL.ink); ln(124, y + 9, 124 + 470 * k, y + 9, 1.2, PAL.ink);
@@ -420,10 +420,10 @@
     paperBG();
     cam(CX, CY, 1 + .014 * E.io(lt / 2.1));
     const ext = lerp(250, 420, E.soft((t - T_ELEV + .04) / .9)), found = BT(151), lift = 70 * E.soft((t - LY[32].t[4]) / .8);
-    const hot = clamp((t - found) / .12);
+    const hot = t >= found ? 1 : 0;
     const salt = elevation(t, ext, lift, hot);
     // lyric left
-    const R = lyType(32, t, { x: 124, y: 470, size: 118, weight: 900, lead: 150, dur: .4 });
+    const R = lyType(32, t, { x: 124, y: 470, size: 118, weight: 900, lead: 150, dur: .32, slit: 1, slitA: .3 });
     if (R) mono('32 /', 124, R[0].y - 150, { size: 15, a: E.soft(lt / .6) });
     // lens: appears on 眼, glides to the salt with the drawer curve, locks on 找 (beat 151)
     const tE = LY[32].t[1];
@@ -433,9 +433,10 @@
       const lx = lerp(ox, salt[0], g), ly = lerp(oy, salt[1], g), rr = lerp(96, 84, lk) * E.out5((t - tE) / .2);
       // magnified view inside the lens once locked
       if (lk > 0) {
-        X.save(); X.beginPath(); X.arc(lx, ly, rr - 2, 0, TAU); X.clip(); X.globalAlpha *= lk;
+        const mz = lerp(1, 1.55, lk);
+        X.save(); X.beginPath(); X.arc(lx, ly, rr - 2, 0, TAU); X.clip();
         rect(lx - rr, ly - rr, rr * 2, rr * 2, PAL.paper);
-        X.translate(lx, ly); X.scale(1.55, 1.55); X.translate(-lx, -ly); elevation(t, ext, lift, hot);
+        X.translate(lx, ly); X.scale(mz, mz); X.translate(-lx, -ly); elevation(t, ext, lift, hot);
         X.restore();
       }
       circle(lx, ly, rr, { stroke: PAL.cobalt, w: 3.2 });
@@ -481,17 +482,19 @@
   let FIT0 = null, FIT1 = null;
   function axoCam(t) {
     if (!FIT0) { FIT0 = fitBox(SPTS, [1060, 140, 1760, 1000]); FIT1 = fitBox(KPTS, [600, 142, 1870, 994]); }
-    const q = clamp((t - T_AXO - .02) / 2.1), k = .12 * q + .88 * E.io3(q), drift = 1 - .03 * E.io((t - 106.6) / 2.9);
+    const q = clamp((t - T_AXO - .02) / 2.1), k = .12 * q + .88 * E.io3(q), drift = 1 - .03 * E.io((t - 106.6) / 3.4);
     const sc = Math.exp(lerp(Math.log(FIT0.sc), Math.log(FIT1.sc), k)) * drift;
     const u = (1 / sc - 1 / FIT0.sc) / (1 / (FIT1.sc * drift) - 1 / FIT0.sc || 1);   // dolly-consistent pan
     const c = [lerp(FIT0.c[0], FIT1.c[0], u), lerp(FIT0.c[1], FIT1.c[1], u)], sp = [lerp(FIT0.s[0], FIT1.s[0], u), lerp(FIT0.s[1], FIT1.s[1], u)];
     return { C: frameCam(KC, YAW, PITCH, sp[0] - sc * c[0], sp[1] - sc * c[1], 1000, 1000 * sc, { fov: 2.4 }), sc };
   }
   // the wave: a travelling ripple out from the seasoning pull-out; each drawer glides open, then home; on 序 all open at once
-  function waveK(t, x, y) {
+  // on 序 every drawer steps out row by row (bottom first, with a small overshoot) into a staircase: row = index from the bottom
+  function waveK(t, x, y, row = 0, f = 1) {
     const d = Math.hypot((x - 110) / 1000, (y - 460) / 1500), t0 = 105.25 + d * .92;
     const open = E.soft((t - t0) / .55), close = E.soft((t - t0 - .8) / .75);
-    return Math.max(open * (1 - close), E.out5((t - HIT + .03) / .2));
+    const hk = (t - HIT + .03 - row * .045) / .22;
+    return Math.max(open * (1 - close), hk > 0 ? E.back(hk, 1.4) * f : 0);
   }
   function drawerPrims(x0, x1, y0, y1, ext, kind) {
     const P = [], w = x1 - x0 - 90, d = 470, cx = (x0 + x1) / 2, o = { iw: IW };
@@ -542,7 +545,7 @@
     for (let u = BASE.length - 1; u >= 0; u--) {
       const [x0, x1, drs] = BASE[u], P = [];
       P.push(...boxModel(x0, 0, 0, x1, 820, KD, { sides: 'bkr', iw: IW }));
-      drs.forEach(([y0, y1, kind]) => { const e = kind === 'spice' ? lerp(.83, 1, E.soft((t - T_AXO) / .9)) : waveK(t, (x0 + x1) / 2, (y0 + y1) / 2); P.push(...drawerPrims(x0, x1, y0, y1, (kind === 'spice' ? 460 : 480) * e, kind)); });
+      drs.forEach(([y0, y1, kind], row) => { const e = kind === 'spice' ? lerp(.83, 1, E.soft((t - T_AXO) / .9)) : waveK(t, (x0 + x1) / 2, (y0 + y1) / 2, row, 1 - .22 * row); P.push(...drawerPrims(x0, x1, y0, y1, (kind === 'spice' ? 460 : 480) * e, kind)); });
       if (u === 0) P.push(...boxModel(x0, 0, 0, x0 + 1, 820, KD, { sides: 'l', iw: IW, layer: 2 }));
       P.push(...boxModel(x0 - (u === 0 ? 20 : 0), 820, -10, x1, 860, KD + 40, { sides: 'lrtf', iw: IW, layer: 2 }));
       R3(P);
@@ -564,7 +567,7 @@
       R3(Q);
     }
     // lyric: large, top-left, in the empty triangle above the run (a paper knockout keeps it clean while the camera travels)
-    const R = lyType(33, t, { x: 118, y: 250, sizes: [86, 134], weights: [500, 900], leads: [168], dur: .3, hold: 1 });
+    const R = lyType(33, t, { x: 118, y: 250, sizes: [86, 134], weights: [500, 900], leads: [168], dur: .28, hold: 1, slit: 1, slitA: .3 });
     if (R) mono('33 /', 120, 150, { size: 15, a: E.soft((t - 105.2) / .6) });
     // the seal: 到位, stamped in orange on 序 (beat 159)
     const sk = clamp((t - HIT) / .16);
