@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HIGOLD 拉篮 MV studio</title>
+<style>
+  @font-face { font-family: 'Smiley'; src: url('.cache/fonts/SmileySans-Oblique.ttf'); font-display: block; }
+  @font-face { font-family: 'NotoSans'; src: url('.cache/fonts/NotoSansSC-VF.ttf'); font-weight: 100 900; font-display: block; }
+  @font-face { font-family: 'NotoSerif'; src: url('.cache/fonts/NotoSerifSC-VF.ttf'); font-weight: 200 900; font-display: block; }
+  @font-face { font-family: 'Qingke'; src: url('.cache/fonts/ZCOOLQingKeHuangYou-Regular.ttf'); font-display: block; }
+  @font-face { font-family: 'Mang'; src: url('.cache/fonts/ZhiMangXing-Regular.ttf'); font-display: block; }
+  @font-face { font-family: 'LongCang'; src: url('.cache/fonts/LongCang-Regular.ttf'); font-display: block; }
+  @font-face { font-family: 'MaShan'; src: url('.cache/fonts/MaShanZheng-Regular.ttf'); font-display: block; }
+  @font-face { font-family: 'Anton'; src: url('.cache/fonts/Anton-Regular.ttf'); font-display: block; }
+  @font-face { font-family: 'Instrument'; src: url('.cache/fonts/InstrumentSerif-Regular.ttf'); font-display: block; }
+  @font-face { font-family: 'InstrumentI'; src: url('.cache/fonts/InstrumentSerif-Italic.ttf'); font-display: block; }
+  @font-face { font-family: 'Mono'; src: url('.cache/fonts/JetBrainsMono-VF.ttf'); font-weight: 100 800; font-display: block; }
+  @font-face { font-family: 'Grotesk'; src: url('.cache/fonts/SpaceGrotesk-VF.ttf'); font-weight: 300 700; font-display: block; }
+  @font-face { font-family: 'Archivo'; src: url('.cache/fonts/ArchivoBlack-Regular.ttf'); font-display: block; }
+  html, body { margin: 0; background: #111; color: #ddd; font: 13px system-ui, sans-serif; }
+  main { padding: 12px; display: grid; gap: 8px; }
+  #out { width: min(100%, 1280px); aspect-ratio: 16/9; height: auto; background: #F5F3EE; }
+  .bar { display: flex; gap: 10px; align-items: center; max-width: 1280px; }
+  #scrub { flex: 1; }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="out" width="1920" height="1080"></canvas>
+  <div class="bar"><button id="play">play</button><input id="scrub" type="range" min="0" max="156.6" step="0.0417" value="0"><span id="tt">loading…</span></div>
+</main>
+<audio id="song" src=".cache/song.mp3" preload="auto"></audio>
+<script src="src/00_core.js"></script>
+<script src="src/01_draw.js"></script>
+<script src="src/02_three.js"></script>
+<script src="src/03_cast.js"></script>
+<script src="src/04_ui.js"></script>
+<script src="src/05_lyrics.js"></script>
+<script src="src/06_timeline.js"></script>
+<script src="src/07_sets.js"></script>
+<script src="src/ch/c01_verse1.js"></script>
+<script src="src/ch/c02_chorus1.js"></script>
+<script src="src/ch/c03_verse2.js"></script>
+<script src="src/ch/c04_chorus2.js"></script>
+<script src="src/ch/c05_verse3.js"></script>
+<script src="src/ch/c06_chorus3.js"></script>
+<script src="src/ch/c07_bridge.js"></script>
+<script src="src/ch/c08_chorus4.js"></script>
+<script src="src/ch/c09_outro.js"></script>
+<script src="src/90_frame.js"></script>
+</body>
+</html>
