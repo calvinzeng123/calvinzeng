@@ -90,7 +90,7 @@
   // ================================================================ SHOT 1 · FIG.1 drawer mitosis (38.5 – 41.44)
   // 一个抽屉 / 变成两个. Under a microscope's field of view: the drawer flicks open on 抽, soft-closes on 屉, elongates on 变,
   // pinches, and snaps into two on 两; on the bar downbeat (个) both daughters pull out together.
-  const S1 = { cx: 1395, cy: 540, w: 420, h: 250, gap: 30, R: 470 };
+  const S1 = { cx: 1395, cy: 540, w: 400, h: 236, gap: 30, R: 470 };
   function scope(t, lt, o = {}) {
     const { cx, cy, R } = S1;
     X.save(); X.beginPath(); X.arc(cx, cy, R, 0, TAU); X.clip();
@@ -139,10 +139,10 @@
       dividing(cx - W2 / 2, cy - h / 2 + drift + wob, W2, h, s, 'c', { w0: w, hot: true, seed: 12, lw: 4 });
       if (s > .55) { const k = (s - .55) / .45; for (const sy of [-1, 1]) arrow(cx, cy + sy * (h / 2 + 96), cx, cy + sy * (h / 2 + 96 - 48 * k), { w: 3, head: 14, seed: 40 + sy }); }
     } else {
-      const age = t - tSnap, g = gap * spring(age, 3.2, .32), pull = .5 * E.soft((t - tPair) / .5);
-      const xL = cx - w - g / 2, xR = cx + g / 2;
+      const age = t - tSnap, g = gap * spring(age, 3.2, .32), pull = .38 * E.soft((t - tPair) / .5);
+      const xL = cx - w - g / 2, xR = cx + g / 2;                            // daughters pull apart, mirror-symmetric
       drawer(xR, cy - h / 2 + drift, w, h, pull, { seed: 14, items: basketItems, lw: 4 });
-      drawer(xL, cy - h / 2 + drift, w, h, pull, { handle: hot, seed: 13, items: basketItems, lw: 4 });
+      drawer(xL, cy - h / 2 + drift, w, h, pull, { handle: hot, seed: 13, items: basketItems, lw: 4, dir: -1 });
       if (age < .35) {
         const k = E.out5(age / .35);
         for (let i = 0; i < 10; i++) {
@@ -192,7 +192,7 @@
     const take = E.soft((t - tWall - .04) / .55);
     const Zg = Math.exp(lerp(0, Math.log(.53), E.io(seg(t, 41.5, 43.1)))), Zf = W / (8 * w + 7 * gap) * (1 + .025 * clamp(t - 43.6));
     const Z = lerp(Zg, Zf, take);
-    const ax0 = lerp(960, -4, take), ay0 = lerp(lerp(S1.cy - h / 2, 70, E.io(seg(t, 41.6, 43.1))), (H - (8 * h + 7 * gap) * Zf) / 2, take);
+    const ax0 = lerp(S1.cx - w - gap / 2, -4, take), ay0 = lerp(lerp(S1.cy - h / 2, 70, E.io(seg(t, 41.6, 43.1))), (H - (8 * h + 7 * gap) * Zf) / 2, take);
     const age = st.last ? t - st.last.tg : 9, sp = age < 1 ? spring(age, 4.2, .34) : 1;
     const gx = st.last && st.last.ax === 'c' ? gap * sp : gap, gy = st.last && st.last.ax === 'r' ? gap * sp : gap;
     let cw = w, ch = h;
@@ -382,7 +382,7 @@
       rect(x + ww - 176, y + hh - 70, 146, 48, PAL.ink);
       text('继续拉 →', x + ww - 103, y + hh - 37, { size: 22, font: F.sans, weight: 800, col: PAL.paper, align: 'center' });
     } });
-    cursor(420 + 640 - 110 + 30 * (1 - E.out(clamp(lt / .4))), 150 + 270 - 60 + 40 * (1 - E.out(clamp(lt / .4))), { click: clamp((lt - .45) / .2) });
+    cursor(420 + 640 - 52 + 40 * (1 - E.out(clamp(lt / .4))), 150 + 270 - 50 + 50 * (1 - E.out(clamp(lt / .4))), { click: clamp((lt - .45) / .2) });
     text('FIG. 3 (cont.)', 280, H - 60, { size: 20, font: MONO, weight: 600, col: PAL.grey, track: 2 });
   }
 
@@ -487,7 +487,7 @@
       const x = x0 + i * cwid, n = str.length, fast = i >= n - 2 ? 1 : i === n - 4 ? clamp((lt - .15) / .4) : i === n - 5 ? clamp((lt - .45) / .3) : 0;
       const col = i < 2 ? PAL.paper : GREEN;
       if (fast > .01) {                      // vertical motion blur: stacked exposures of the rolling digit
-        for (let k = 0; k < 7; k++) { const dy = (k / 6 - .5) * sz * .3 * fast; text(k === 3 ? ch : String((+ch + k) % 10), x, CY + sz * .36 + dy, { size: sz, font: F.mono, weight: 800, col, a: .13 * fast }); }
+        for (let k = 0; k < 9; k++) { const dy = (k / 8 - .5) * sz * .34 * fast; text(ch, x, CY + sz * .36 + dy, { size: sz, font: F.mono, weight: 800, col, a: .12 * fast }); }
         text(ch, x, CY + sz * .36, { size: sz, font: F.mono, weight: 800, col, a: 1 - .8 * fast });
       } else text(ch, x, CY + sz * .36, { size: sz, font: F.mono, weight: 800, col });
     });
@@ -532,8 +532,9 @@
     DARK = slotH < 1.05;
     paperBG(PAL.night);
     // --- the bright slot at the end of the corridor
-    if (dEnd < 60) {
-      const a = clamp((60 - dEnd) / 20), q = [P(-RX, -RY, Z_END), P(RX, -RY, Z_END), P(RX, RY, Z_END), P(-RX, RY, Z_END)];
+    const slotA = dEnd < 60 ? clamp((60 - dEnd) / 20) : 0;
+    if (slotA > 0) {
+      const a = slotA, q = [P(-RX, -RY, Z_END), P(RX, -RY, Z_END), P(RX, RY, Z_END), P(-RX, RY, Z_END)];
       X.save(); X.globalAlpha = a; X.shadowColor = rgba(PAL.paper, .9); X.shadowBlur = 40; poly(q); X.fillStyle = PAL.paper; X.fill(); X.restore();
       const hy = P(0, -RY * .7, Z_END), hx0 = P(-RX * .3, -RY * .7, Z_END), hx1 = P(RX * .3, -RY * .7, Z_END);
       line(hx0[0], hx0[1], hx1[0], hx1[1], Math.max(1.5, 18 / Math.max(1, dEnd)), PAL.orange, a);
@@ -558,7 +559,7 @@
           const ins = e * (ax === 'x' ? RX : RY) * .55 * (.6 + .4 * hash(i * 7 + c * 3 + (ax === 'x' ? 0 : 50) + sg));
           const back = [q(u0, z0, 0), q(u1, z0, 0), q(u1, z1, 0), q(u0, z1, 0)];
           const front = [q(u0, z0, ins), q(u1, z0, ins), q(u1, z1, ins), q(u0, z1, ins)];
-          X.globalAlpha = al;
+          X.globalAlpha = Math.max(al, slotA);
           if (ins > .01) {
             // near face of the pulled box (faces the camera), then the front panel
             poly([back[0], back[1], front[1], front[0]]); X.fillStyle = PAL.night2; X.fill();
@@ -567,7 +568,7 @@
             X.beginPath(); for (let k = 1; k < 4; k++) { const a = lerpP(back[0], back[1], k / 4), b = lerpP(front[0], front[1], k / 4); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); }
             X.lineWidth = .9; X.stroke();
           }
-          poly(front); X.fillStyle = PAL.night; X.fill();
+          X.globalAlpha = Math.max(al, slotA); poly(front); X.fillStyle = PAL.night; X.fill();
           X.strokeStyle = PAL.paper; X.lineWidth = Math.max(.8, 2.4 / Math.max(.6, dm) * 1.4);
           X.globalAlpha = al * (1 - blur * .6); X.stroke();
           // handle slit
