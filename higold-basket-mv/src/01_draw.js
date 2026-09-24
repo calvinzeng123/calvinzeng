@@ -226,7 +226,8 @@ function markerBuf(str, size, font, col, variant) {
 }
 // marker(str, x, y, {size, font, col, align: left|center|right, rot, a, sx, sy})  — y is the vertical centre
 function marker(str, x, y, o = {}) {
-  const size = o.size ?? 80, font = o.font ?? F.hand, col = o.col ?? PAL.ink, b = markerBuf(str, size, font, col, (o.variant ?? 0) + (Math.floor(BOIL / 2) % 3));
+  if ((o.size ?? 80) < 2) return 0;
+  const size = Math.round(o.size ?? 80), font = o.font ?? F.hand, col = o.col ?? PAL.ink, b = markerBuf(str, size, font, col, (o.variant ?? 0) + (Math.floor(BOIL / 2) % 3));
   const inner = b.w - b.pad * 2, ax = o.align === 'center' ? inner / 2 : o.align === 'right' ? inner : 0;
   X.save(); X.globalAlpha *= (o.a ?? 1); X.translate(x, y); if (o.rot) X.rotate(o.rot); X.scale(o.sx ?? 1, o.sy ?? 1);
   X.drawImage(b.c, -b.pad - ax, -b.h / 2); X.restore();

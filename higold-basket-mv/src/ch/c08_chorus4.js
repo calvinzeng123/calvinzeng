@@ -351,7 +351,7 @@
     paperBG(PAL.night); DARK = true;
     const k = E.io(clamp(lt / 2.4)), C = frameCam([-480, 1000, 560], .46 - .12 * k, .26 - .04 * k, 1250, 560, 2600, 1030 + 60 * k, { fov: 30 });
     const OPEN_AT = [0, .05, .1, .13, .17, .2, .12];
-    const kp = glassify(kitchen(SPARK_EX.map((v, j) => v * (.3 + .7 * E.soft(clamp((lt + .05 - OPEN_AT[j]) / .8))))));
+    const EXN = SPARK_EX.map((v, j) => v * (.3 + .7 * E.soft(clamp((lt + .05 - OPEN_AT[j]) / .8)))), kp = glassify(kitchen(EXN));
     // floor line
     const f0 = pin(C, [-1700, 0, 460]), f1 = pin(C, [900, 0, 460]), fy = x => f0[1] + (f1[1] - f0[1]) * (x - f0[0]) / (f1[0] - f0[0]);
     X.save(); const fg = X.createLinearGradient(640, 0, 900, 0); fg.addColorStop(0, rgba(PAL.steel1, 0)); fg.addColorStop(1, rgba(PAL.steel1, .5));
@@ -368,12 +368,12 @@
     X.globalCompositeOperation = 'lighter'; X.fillStyle = g; X.setTransform(1, 0, 0, 1, 0, 0); X.fillRect(0, 0, W, H);
     X.restore();
     // glints: every corner lights as the sweep passes it; on each beat a chosen set flares big
-    const L = liftPos(1), corners = CORNERS.concat([[-172, L[0] + 170, L[1] + 270], [428, L[0] + 170, L[1] + 270], [428, L[0], L[1] + 270]]);
+    const L = liftPos(EXN[6]), corners = CORNERS.concat([[-172, L[0] + 170, L[1] + 270], [428, L[0] + 170, L[1] + 270], [428, L[0], L[1] + 270]]);
     // small twinkles on every basket's front rim corners, lit only by the passing sweep
     const rims = [];
-    for (let k = 0; k < 5; k++) for (const sgn of [-1, 1]) rims.push([-1240 + sgn * 210, 200 + k * 400, SPARK_EX[0] * 380 + 420]);
-    for (const [xc, i0, i1] of [[-464, 2, 3], [172, 4, 5]]) for (const [y0, i] of [[60, i0], [400, i1]]) for (const sgn of [-1, 1]) rims.push([xc + sgn * 280, y0 + 150, 440 + SPARK_EX[i] * 400]);
-    for (const sgn of [-1, 1]) rims.push([-880 + sgn * 75, 610, 440 + SPARK_EX[1] * 400], [128 + sgn * 300, L[0] + 170, L[1] + 270]);
+    for (let k = 0; k < 5; k++) for (const sgn of [-1, 1]) rims.push([-1240 + sgn * 210, 200 + k * 400, EXN[0] * 380 + 420]);
+    for (const [xc, i0, i1] of [[-464, 2, 3], [172, 4, 5]]) for (const [y0, i] of [[60, i0], [400, i1]]) for (const sgn of [-1, 1]) rims.push([xc + sgn * 280, y0 + 150, 440 + EXN[i] * 400]);
+    for (const sgn of [-1, 1]) rims.push([-880 + sgn * 75, 610, 440 + EXN[1] * 400], [128 + sgn * 300, L[0] + 170, L[1] + 270]);
     rims.forEach((c, j) => { const q = pin(C, c), u = (q[0] - (sx - q[1] * sl)) / bw, kk = Math.exp(-u * u * 3) * (.7 + .3 * Math.sin(t * 25 + j)); if (kk > .05) sparkle(q[0], q[1], 17 * kk, { col: PAL.shine, rot: j }); });
     corners.forEach((c, j) => {
       const q = pin(C, c), u = (q[0] - (sx - q[1] * sl)) / bw;   // distance from the band centre at this height
@@ -395,7 +395,7 @@
     const L = LY[43].t;                                     // 悍 高 拉 篮 全 拉 满
     // the drawer: a nudge on the first 拉, then the full pull on 全 that lands on 满
     const p = lerp(.22 * E.soft(clamp((t - L[2]) / .5)), 1, E.soft(clamp((t - L[4]) / .62)));
-    const ext = p * 420, C = frameCam([0, 150, 230 + ext * .5], -.62 + .05 * E.io(clamp(lt / 2.2)), .5, 1480, 600, 760, 840, { fov: 28 });
+    const ext = p * 420, C = frameCam([0, 150, 230 + ext * .5], -.62 + .05 * E.io(clamp(lt / 2.2)), .5, 1420, 540, 760, 720, { fov: 28 });
     const prims = nightify([...boxModel(-330, -20, -20, 330, 400, 460, { sides: 'lrbk', fill: PAL.paper, sideFill: PAL.paper2, backFill: PAL.paper2 }),
       ...boxModel(-350, 400, -20, 350, 430, 490, { sides: 'lrtf', fill: PAL.paper, frontFill: PAL.paper2 }), ...dishDrawer(ext)]);
     render3(prims, C, { style: 'steel', dark: true, shine: lerp(-500, 500, frac(lt * .6)) });
@@ -458,10 +458,10 @@
     const fy = x => f0[1] + (f1[1] - f0[1]) * (x - f0[0]) / (f1[0] - f0[0]);
     handLine(-20, fy(-20), W + 20, fy(W + 20), { w: 2.5, col: ink, seed: 808, a: night ? .5 : .9 });
     render3((night ? glassify : P => P)(kitchen(ex, { items: true })), C, { style: night ? 'glow' : 'ink', dark: night, lw: .9 });
-    // the crew, tiny, glide home along the countertop (scale contrast), then wave goodnight
+    // the crew, tiny, gather along the countertop (scale contrast), then wave goodnight
     CREW.forEach((who, i) => {
       const k = i - 2, lead = who === 'lan', arrive = E.soft(clamp((t - T_HOME - .15 - Math.abs(k) * .1) / 1.3));
-      const wx = -330 + k * 150 + (1 - arrive) * k * 420, q = C.project([wx, 720, 400]), sc = q[3] * 29;
+      const wx = lerp([-930, -720, -330, 80, 440][i], -330 + k * 150, arrive), q = C.project([wx, 720, 400]), sc = q[3] * 29;
       const P = lead && t > 134.3 ? move('wave', t) : move('sway', t, i);
       figure(q[0], q[1], sc * (lead ? 1.12 : 1), P, { who, col: ink, dark: night, face: t > T_DA ? 'happy' : (lead ? 'smile' : 'dot'), blush: lead ? 1 : 0, seed: i * 3 + 1, w: .24 });
     });
