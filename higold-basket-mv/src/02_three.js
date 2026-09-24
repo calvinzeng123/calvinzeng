@@ -187,11 +187,14 @@ function render3(prims, C, o = {}) {
   X.restore();
   return labels;
 }
+// night-mode fill remap: light paper/steel fills become dark panels so night shots never get light slabs
+function darkFill(f) { return f === PAL.paper ? PAL.night2 : f === PAL.paper2 ? '#26262B' : f === PAL.steel2 || f === PAL.steel1 || f === '#DADDE0' ? '#3A3D42' : f === PAL.shine ? '#55595F' : f; }
 function drawFace(pr, p, o) {
   // back-face culling is not applied: faces are drawn painter-style, and their fill occludes what's behind
   X.beginPath(); X.moveTo(pr[0][0], pr[0][1]); for (let i = 1; i < pr.length; i++) X.lineTo(pr[i][0], pr[i][1]); X.closePath();
-  if (p.fill) { X.fillStyle = o.dark && p.fill === PAL.paper ? PAL.night2 : p.fill; X.fill(); }
-  if (p.hatch) { X.save(); X.clip(); hatch(pr.map(q => [q[0], q[1]]), { gap: p.hatch, w: 1.1, a: .5, col: o.dark ? PAL.steel1 : PAL.ink }); X.restore(); }
+  if (p.fill) { X.fillStyle = o.dark ? darkFill(p.fill) : p.fill; X.fill(); }
+  if (p.hatch) { X.save(); X.clip(); hatch(pr.map(q => [q[0], q[1]]), { gap: p.hatch, w: 1.1, a: .5, col: o.dark ? PAL.steel1 : PAL.ink }); X.restore();
+    X.beginPath(); X.moveTo(pr[0][0], pr[0][1]); for (let i = 1; i < pr.length; i++) X.lineTo(pr[i][0], pr[i][1]); X.closePath(); }
   if (p.ink) { X.strokeStyle = o.dark ? PAL.steel2 : p.ink; X.lineWidth = (p.iw ?? 2) * (o.lw ?? 1); X.stroke(); }
 }
 function drawWire(pr, p, style, lwk, o) {
@@ -212,8 +215,9 @@ function drawLathe(p, C, o) {
   const all = rings.flat().filter(q => q[2] > 5); if (all.length < 3) return;
   const hull = convexHull(all.map(q => [q[0], q[1]]));
   X.beginPath(); X.moveTo(hull[0][0], hull[0][1]); for (const q of hull) X.lineTo(q[0], q[1]); X.closePath();
-  X.fillStyle = o.dark ? PAL.night2 : p.fill; X.fill();
-  if (p.band) { X.save(); X.clip(); const rg = rings[Math.floor(rings.length * .5)]; hatch(hull, { gap: 7, w: 1, a: .35, col: o.dark ? PAL.steel2 : PAL.ink, angle: -1.1 }); X.restore(); }
+  X.fillStyle = o.dark ? darkFill(p.fill) : p.fill; X.fill();
+  if (p.band) { X.save(); X.clip(); hatch(hull, { gap: 7, w: 1, a: .35, col: o.dark ? PAL.steel2 : PAL.ink, angle: -1.1 }); X.restore();
+    X.beginPath(); X.moveTo(hull[0][0], hull[0][1]); for (const q of hull) X.lineTo(q[0], q[1]); X.closePath(); }
   const inkc = o.dark ? PAL.steel2 : p.ink, iw = (p.iw ?? 2.2) * (o.lw ?? 1);
   X.strokeStyle = inkc; X.lineWidth = iw; X.stroke();
   // visible rim: the top ring (last) fully if open (we look into it), else its near half; plus fine detail rings (near halves)

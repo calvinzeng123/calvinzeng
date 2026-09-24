@@ -71,7 +71,7 @@ function lySung(i, t) { const L = LY[i], n = L.t.length; let c = 0; for (let k =
 
 // HERO: huge per-character slam type. o: {x, y (baseline of first row), size, lead (row gap factor), font, weight, col, hi (string of
 // chars to paint orange), align ('left'|'center'|'right'), stroke (outline colour → outline type), sw, skew, hold, exit ('up'|'fade'|'cut'),
-// ghost (0..1 faint preview of unsung chars), drop (px the char falls in from), track}
+// ghost (0..1 faint preview of unsung chars), drop (px the char falls in from), track, hiFill (with stroke: hi chars solid orange)}
 function lyHero(i, t, o = {}) {
   if (i < 0) return; const env = lyEnv(i, t, o.hold ?? .15, o.fade ?? .2); if (env <= 0) return; LYRIC_DRAWN.add(i);
   const rows = lyRows(i), size = o.size ?? 200, font = o.font ?? F.heavy, wt = o.weight ?? 900, lead = (o.lead ?? 1.08) * size, track = o.track ?? -size * .02;
@@ -89,7 +89,8 @@ function lyHero(i, t, o = {}) {
       if (k > 0) {
         const s = lerp(o.pop ?? 1.35, 1, E.out5(k)), dy = (1 - E.out5(k)) * -(o.drop ?? size * .18), a = ex === 'up' ? clamp(k * 3) * clamp(env * 3) : clamp(k * 3);
         X.save(); X.translate(x + wch / 2, y - size * .38 + dy); X.scale(s, s); X.translate(-(x + wch / 2), -(y - size * .38));
-        if (o.stroke) text(c.ch, x, y, { size, font, weight: wt, col: null, stroke: hot ? PAL.orange : o.stroke, sw: o.sw ?? 5, a, skew: o.skew });
+        if (o.stroke && hot && o.hiFill) text(c.ch, x, y, { size, font, weight: wt, col: PAL.orange, a, skew: o.skew });   // outline type, solid orange hook chars
+        else if (o.stroke) text(c.ch, x, y, { size, font, weight: wt, col: null, stroke: hot ? PAL.orange : o.stroke, sw: o.sw ?? 5, a, skew: o.skew });
         else text(c.ch, x, y, { size, font, weight: wt, col, a, skew: o.skew });
         X.restore();
       }
