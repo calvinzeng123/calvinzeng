@@ -254,7 +254,9 @@
     const land = bt(38), zp = 1 + punch(t, [land], .08, 6);
     const ext = 220 + 260 * E.soft((lt + .12) / .8);
     cam(CX, CY, zp);
-    const C = frameCam([-330, 130, 700], -.05 + lt * .015, .17, CX - 20, 610, 1820, 1760, { fov: 30 });
+    // tracking shot: framed on the queue while it forms, then the camera pans right with the leap and lands on the basket
+    const ax = lerp(-800, -40, E.io((t - T7[4] + .08) / (land - T7[4] + .2)));
+    const C = frameCam([ax, 110, 820], -.07 + lt * .015, .22, CX, 770, 1100, 1480, { fov: 30 });
     const prims = [];
     prims.push(...boxModel(-480, -20, -20, 480, 360, 460, { sides: 'lrbk', fill: PAL.paper, sideFill: PAL.paper2, backFill: PAL.paper2 }));
     prims.push(...boxModel(-500, 360, -20, 500, 392, 492, { sides: 'lrtf', fill: PAL.paper, frontFill: PAL.paper2 }));
@@ -263,7 +265,7 @@
     prims.push(...slideModel(-bw / 2 - 14, by + 80, bd, ext), ...slideModel(bw / 2 + 14, by + 80, bd, ext));
     // queue: each item hops into its spot on its syllable (锅 碗 瓢 盆), bounces on the 8ths; the front of the line takes the far
     // slot so all four flights run parallel; take-offs a 32nd apart from 排, the last landing on 队
-    const shadows = [], zq = 760, qx = [-590, -800, -1010, -1220], slotX = [315, 105, -105, -315];
+    const shadows = [], zq = 1000, qx = [-545, -735, -925, -1115], slotX = [315, 105, -105, -315];
     MARCH.forEach((kind, i) => {
       const t0 = T7[i] - .1; if (t < t0) return;
       let x, y, z = zq, tilt;
@@ -296,7 +298,7 @@
       bbox(b[0] - 14, b[1] - 50, b[2] - b[0] + 28, b[3] - b[1] + 64, '排队完成 ✓', { k: clamp((t - land - .04) / .2), lw: 4, size: 28 });
     }
     camEnd();
-    lySide(7, t, { x: 120, y: 300, size: 120 });
+    lySide(7, t, { x: 120, y: 260, size: 120 });
   }
 
   // =====================================================================================================
@@ -415,7 +417,7 @@
       const ga = .62 * (1 - clamp((t - pullT + .04) / .12));
       if (ga > 0) {
         figure(bentX, floor, s, BENT, { who: 'lan', col: PAL.grey, face: 'o', a: ga, seed: 51, shadow: false });
-        const k1 = clamp((t - xT) / .1), k2 = clamp((t - xT - .08) / .1), cx = bentX + 110, cy = floor - 300, r = 150;
+        const k1 = clamp((t - xT) / .1), k2 = clamp((t - xT - .08) / .1), cx = bentX + 225, cy = floor - 430, r = 110;
         X.save(); X.globalAlpha *= clamp(ga / .62);
         if (k1 > 0) inkStroke(partial([[cx - r, cy - r], [cx + r, cy + r]], k1), { w: 28, col: PAL.orange, taper: [.05, .25], seed: 61 });
         if (k2 > 0) inkStroke(partial([[cx + r, cy - r * .9], [cx - r, cy + r * 1.05]], k2), { w: 28, col: PAL.orange, taper: [.05, .25], seed: 62 });
@@ -456,10 +458,10 @@
   function sSteel(t, lt) {        // 5a: low front, the wire wall face-on
     paperBG();
     const ext = 250 + 180 * E.soft((lt + .1) / .9);
-    const C = frameCam([0, 150, ext + 240], -.2 + lt * .12, .1, 1200, 560, 700, 1180, { fov: 26 });
+    const C = frameCam([0, 150, ext + 240], -.2 + lt * .12, .1, 1200, 580, 640, 1300, { fov: 26 });
     render3(CARCASS(), C, { style: 'ink', lw: .7, a: .5 });
     const box = screenBox(C, boxCorners(-280, 60, ext, 280, 240, ext + 440));
-    steelDrawer(C, ext, null, 1);
+    render3(dishDrawer(ext, { front: false, slides: false }), C, { style: 'steel' });
     sheen(box, t, { rot: -.4 });
     const pts = [[-280, 210, ext + 440], [280, 210, ext + 440], [0, 212, ext + 440], [-140, 60, ext + 440]].map(p => pin(C, p));
     beatGlints(t, pts, 110);
@@ -504,29 +506,31 @@
     [T11[0], T11[1], T11[2]].forEach(ti => { ext += 22 * Math.sin(clamp((t - ti) / .2) * Math.PI); });
     ext += 70 * E.soft((t - T11[3]) / .3) + 250 * E.soft((t - T11[4]) / .75);
     const [shx, shy] = shake(t, 12 * dec(t, T11[4], 9) + 5 * dec(t, T11[3], 12), 4);
-    const C = frameCam([0, 290, 470], -.03 + .02 * Math.sin(lt * 1.6), .4, CX + shx, 500 + shy, 980, 1300, { fov: 30 });
+    const C = frameCam([0, 330, 470], -.03 + .02 * Math.sin(lt * 1.6), .34, CX + shx, 610 + shy, 1000, 1080, { fov: 30 });
     const sk = dec(t, T11[4], 4);
-    if (sk > .02) speedLines(CX, 480, 520, 1500, 64, { a: .2 * sk, w: 12, seed: 7 });
-    const w = 720, d = 420, h = 170, y0 = 250, fz = d + 20 + ext;
-    const prims = [...boxModel(-420, 0, 0, 420, 520, 460, { sides: 'lrbk', fill: PAL.paper, sideFill: PAL.paper2, backFill: PAL.paper2 }),
-      ...boxModel(-440, 520, -20, 440, 552, 492, { sides: 'lrtf', fill: PAL.paper, frontFill: PAL.paper2 }),
-      ...doorModel(-400, 12, 400, 180, 460 + 20, { handle: false, fill: PAL.paper2 }),
+    if (sk > .02) speedLines(CX, 460, 520, 1500, 64, { a: .2 * sk, w: 12, seed: 7 });
+    handLine(-40, pin(C, [0, 0, 480])[1], W + 40, pin(C, [0, 0, 480])[1], { w: 3, seed: 81 });
+    // a tall base unit: the drawer sits high (front 300..640), a plain door below; the J-pull runs along the drawer's bottom edge
+    const w = 720, d = 420, h = 170, y0 = 370, fz = d + 20 + ext, FY0 = 300, FY1 = 640;
+    const prims = [...boxModel(-420, 0, 0, 420, 650, 460, { sides: 'lrbk', fill: PAL.paper, sideFill: PAL.paper2, backFill: PAL.paper2 }),
+      ...boxModel(-440, 650, -20, 440, 682, 492, { sides: 'lrtf', fill: PAL.paper, frontFill: PAL.paper2 }),
+      ...doorModel(-400, 14, 400, 290, 460 + 20, { handle: false, fill: PAL.paper2 }),
       ...dishDrawer(ext, { w, d, h, y0, front: false, plates: 9 }),
-      ...doorModel(-400, 190, 400, 470, fz, { handle: false })];
+      ...doorModel(-400, FY0, 400, FY1, fz, { handle: false })];
     render3(prims, C, { style: 'steel' });
-    // the drawer front as a local 2D plane (mm): u across 0..800, v down 0..280 — type, handle and LAN live on it
-    const TL = pin(C, [-400, 470, fz]), TR = pin(C, [400, 470, fz]), BL = pin(C, [-400, 190, fz]);
-    X.save(); X.transform((TR[0] - TL[0]) / 800, (TR[1] - TL[1]) / 800, (BL[0] - TL[0]) / 280, (BL[1] - TL[1]) / 280, TL[0], TL[1]);
-    slam(11, t, { rows: [0], size: 150, x: 400, y: 190, font: F.smiley, weight: 400, hi: '拉', pop: 1.5, tickR: .55, track: 6 });
+    // the drawer front as a local 2D plane (mm): u across 0..800, v down 0..340 — type, handle and LAN live on it
+    const TL = pin(C, [-400, FY1, fz]), TR = pin(C, [400, FY1, fz]), BL = pin(C, [-400, FY0, fz]), FH = FY1 - FY0;
+    X.save(); X.transform((TR[0] - TL[0]) / 800, (TR[1] - TL[1]) / 800, (BL[0] - TL[0]) / FH, (BL[1] - TL[1]) / FH, TL[0], TL[1]);
+    slam(11, t, { rows: [0], size: 150, x: 400, y: 200, font: F.smiley, weight: 400, hi: '拉', pop: 1.5, tickR: .55, track: 6 });
     // J-pull bar along the bottom edge on two standoffs
-    for (const u of [170, 630]) rect(u - 6, 276, 12, 22, PAL.ink);
-    steelBar(150, 304, 650, 18);
-    // tiny LAN hangs off the bar: place her so both hands sit on it
+    for (const u of [170, 630]) rect(u - 7, FH - 4, 14, 26, PAL.ink);
+    steelBar(140, FH + 28, 660, 20);
+    // LAN hangs off the bar: place her so both hands sit on it (feet just clear of the floor)
     const P = poseAt(t, [[-9, HANG], [T11[0], TUG, .08], [T11[0] + .12, HANG, .1], [T11[1], TUG, .08], [T11[1] + .12, HANG, .1], [T11[2], TUG, .08], [T11[2] + .12, HANG, .1],
       [T11[3], TUG, .08], [T11[4], SWING, .09], [T11[4] + .35, pose({ ...SWING, lean: -.25, hR: .7 }), .25]]);
-    const s = 17, sway = 18 * Math.sin(t * 5.2) * (1 - sk), hd = handsOf(0, 0, s, P, { who: 'lan', seed: 11 });
+    const s = 28, sway = 14 * Math.sin(t * 5.2) * (1 - sk), hd = handsOf(0, 0, s, P, { who: 'lan', seed: 11 });
     const hmx = (hd.handL[0] + hd.handR[0]) / 2, hmy = Math.min(hd.handL[1], hd.handR[1]);
-    figure(400 - hmx + sway * .3, 300 - hmy, s, P, { who: 'lan', face: t >= T11[4] ? 'wow' : 'happy', blush: 1.2, seed: 11, shadow: false });
+    figure(400 - hmx + sway, FH + 26 - hmy, s, P, { who: 'lan', face: t >= T11[4] ? 'wow' : 'happy', blush: 1.2, seed: 11, shadow: false });
     X.restore();
   }
 
