@@ -410,7 +410,7 @@
   const LINEUP = [['调味拉篮', 'spice'], ['转角拉篮', 'corner'], ['碗碟拉篮', 'dish'], ['高柜拉篮', 'tall'], ['升降拉篮', 'lift']];
   function shotBrand(t, lt) {
     paperBG(PAL.night); DARK = true;
-    const L = LY[43].t, FLOOR = 792;                        // 悍 高 拉 篮 全 拉 满
+    const L = LY[43].t, FLOOR = 748;                        // 悍 高 拉 篮 全 拉 满
     const PT = [L[1], L[2], L[3], L[4], L[5] - BEAT / 4 + .02];      // the fifth pull is timed to seat on 满
     const ek = PT.map(a => E.soft(clamp((t - a) / .5))), p = ek.reduce((a, b) => a + b, 0) / 5;
     // giant wordmark geometry (whole word rises from behind the stage line with E.soft)
@@ -419,7 +419,7 @@
     const wordmark = () => { X.save(); X.beginPath(); X.rect(0, 0, W, base + 2); X.clip();
       text('HIGOLD', CX, base + (1 - hk) * (asc + 20), { size: hsz, font: F.anton, col: PAL.paper, align: 'center', track: 2 * hsz / 100 }); X.restore(); };
     // stage line + a faint floor glow
-    rect(60, FLOOR, W - 120, 2, PAL.steel2, .5);
+    rect(60, FLOOR, W - 120, 2, PAL.steel2, .5); rect(60, FLOOR + 90, W - 120, 1, PAL.steel2, .25);
     X.save(); const fg = X.createLinearGradient(0, FLOOR, 0, FLOOR + 110); fg.addColorStop(0, rgba(PAL.steel2, .10)); fg.addColorStop(1, rgba(PAL.steel2, 0)); X.fillStyle = fg; X.fillRect(60, FLOOR, W - 120, 110); X.restore();
     // the line-up: glow line art on the night; where a unit crosses the wordmark it is re-drawn as ink line art INSIDE
     // the letters (an offscreen letter layer, units composited source-atop), so HIGOLD stays solid and every unit stays whole
@@ -437,9 +437,9 @@
     units.forEach(({ name, j, slot }) => {
       // member tag
       const done = ek[j] > .9, tk = snapK(t, PT[j], .2);
-      text(String(j + 1).padStart(2, '0'), slot - 70, FLOOR + 42, { size: 20, font: F.mono, weight: 800, col: PAL.orange });
-      text(name, slot - 36, FLOOR + 42, { size: 22, font: F.sans, weight: 700, col: PAL.paper, a: .55 + .45 * tk });
-      if (done) sparkle(slot + 92, FLOOR + 34, 11 * E.back(clamp((ek[j] - .9) * 10), 2), { col: PAL.orange });
+      text(String(j + 1).padStart(2, '0'), slot - 70, FLOOR + 118, { size: 20, font: F.mono, weight: 800, col: PAL.orange });
+      text(name, slot - 36, FLOOR + 118, { size: 22, font: F.sans, weight: 700, col: PAL.paper, a: .55 + .45 * tk });
+      if (done) sparkle(slot + 92, FLOOR + 110, 11 * E.back(clamp((ek[j] - .9) * 10), 2), { col: PAL.orange });
     });
     // lyric strip: 悍高拉篮，全拉满 — one row, per-char slam; 全拉满 in orange
     const rows = lyRows(43), env = lyEnv(43, t, .25, .2), sz = 118;
@@ -467,8 +467,8 @@
     for (let i = 0; i < fill; i++) rect(bx + 7 + i * cell, by + 8, cell - 5, bh - 16, PAL.orange);
     if (full) rect(bx + 3, by + 3, bw - 6, bh - 6, PAL.shine, .8 * (1 - fk));           // one white flash as it completes
     text('PULL-OUT', bx, by - 14, { size: 20, font: F.mono, weight: 700, col: PAL.steel2, track: 3 });
-    text(`${Math.round(fill / nb * 5)}/5`, bx + bw / 2, by - 14, { size: 20, font: F.mono, weight: 700, col: PAL.steel2, align: 'center' });
-    text(Math.round(fill / nb * 100) + '%', bx + bw, by - 14, { size: 24, font: F.mono, weight: 800, col: PAL.paper, align: 'right' });
+    text(`${Math.round(fill / nb * 5)}/5`, bx + 150, by - 14, { size: 20, font: F.mono, weight: 700, col: PAL.steel2 });
+    text(Math.round(fill / nb * 100) + '%', bx + 330, by - 14, { size: 24, font: F.mono, weight: 800, col: PAL.paper, align: 'right' });
     X.restore();
     // the one extra 拉满: a stamp on the bar, on 满
     const sk = snapK(t, L[6] + .04, .25);
