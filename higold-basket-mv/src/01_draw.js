@@ -182,12 +182,13 @@ const F = {
   sans: '"NotoSans", sans-serif',         // 300–500 clean subtitle
   serif: '"NotoSerif", serif',            // editorial CN serif
   smiley: '"Smiley", "NotoSans", sans-serif',  // 得意黑: sleek oblique display, very now
-  hand: '"Mang", "NotoSans", sans-serif', // brush-marker handwriting (Zhi Mang Xing)
+  hand: '"MaShan", "NotoSans", sans-serif', // brush-marker handwriting (Ma Shan Zheng: legible brush kaishu)
+  handWild: '"Mang", "NotoSans", sans-serif', // expressive cursive (Zhi Mang Xing) — decoration only, never for lyrics
   pen: '"LongCang", "NotoSans", sans-serif',   // thin pen handwriting
   qing: '"Qingke", "NotoSans", sans-serif',    // chunky rounded display
   anton: '"Anton", "NotoSans", sans-serif',    // condensed Latin title-card
   serifI: '"InstrumentI", serif', serifR: '"Instrument", serif',
-  mono: '"Mono", monospace', grotesk: '"Grotesk", sans-serif', archivo: '"Archivo", sans-serif',
+  mono: '"Mono", "NotoSans", monospace', grotesk: '"Grotesk", sans-serif', archivo: '"Archivo", sans-serif',
 };
 // text(str, x, y, {size, font, weight, col, align, base, track (letter-spacing px), rot, a, stroke, sw, skew, sx, sy})
 function text(str, x, y, o = {}) {
@@ -198,9 +199,26 @@ function text(str, x, y, o = {}) {
   X.font = `${o.italic ? 'italic ' : ''}${o.weight ?? 400} ${size}px ${o.font ?? F.sans}`;
   X.textAlign = o.align ?? 'left'; X.textBaseline = o.base ?? 'alphabetic';
   if (o.track) X.letterSpacing = o.track + 'px';
-  if (o.stroke) { X.strokeStyle = o.stroke; X.lineWidth = o.sw ?? 4; X.lineJoin = 'round'; X.strokeText(str, 0, 0); }
+  if (o.stroke) outlineText(str, o.stroke, (o.sw ?? 4) * .7);   // outer outline only (no internal contour overlaps)
   if (o.col !== null) { X.fillStyle = o.col ?? PAL.ink; X.fillText(str, 0, 0); }
   X.restore();
+}
+// Outline-only type without the variable font's internal overlapping contours: stroke at 2× width into a buffer, then punch out
+// the glyph fill, leaving only the outer half of the stroke. Cached per (string, font, alignment, colour, width).
+const _ol = new Map();
+function outlineText(str, col, sw) {
+  const key = [str, X.font, X.textAlign, X.textBaseline, X.letterSpacing, col, sw].join('|');
+  let b = _ol.get(key);
+  if (!b) {
+    const m = X.measureText(str), pad = sw * 2 + 4, L = Math.ceil(m.actualBoundingBoxLeft + pad), R = Math.ceil(m.actualBoundingBoxRight + pad);
+    const A = Math.ceil(m.actualBoundingBoxAscent + pad), D = Math.ceil(m.actualBoundingBoxDescent + pad);
+    const c = document.createElement('canvas'); c.width = Math.max(1, L + R); c.height = Math.max(1, A + D); const g = c.getContext('2d');
+    g.font = X.font; g.textAlign = X.textAlign; g.textBaseline = X.textBaseline; g.letterSpacing = X.letterSpacing;
+    g.strokeStyle = col; g.lineWidth = sw * 2; g.lineJoin = 'round'; g.strokeText(str, L, A);
+    g.globalCompositeOperation = 'destination-out'; g.fillText(str, L, A);
+    b = { c, L, A }; if (_ol.size > 800) _ol.clear(); _ol.set(key, b);
+  }
+  X.drawImage(b.c, -b.L, -b.A);
 }
 function measure(str, size, font = F.sans, weight = 400, track = 0) {
   X.save(); X.font = `${weight} ${size}px ${font}`; if (track) X.letterSpacing = track + 'px'; const w = X.measureText(str).width; X.restore(); return w;

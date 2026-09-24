@@ -26,7 +26,7 @@ This is the single source of truth for the video. Every chapter file is judged a
 | Hero slam | `F.heavy` 900 (Noto Sans SC Black) | the hook, giant full-frame words |
 | Sleek display | `F.smiley` (得意黑) | side-column lyrics, titles; the "now" Chinese design face |
 | Editorial | `F.serif` 900 (Noto Serif SC) | vertical columns, museum labels, quiet moments |
-| Marker | `marker()` / `F.hand` (Zhi Mang Xing + dry-brush 飞白) | handwritten brand-poster lines, onomatopoeia (嗒!) |
+| Marker | `marker()` / `F.hand` (Ma Shan Zheng brush kaishu + dry-brush 飞白; `F.handWild` Zhi Mang Xing for decoration only) | handwritten brand-poster lines, onomatopoeia (嗒!) |
 | Latin title | `F.anton`, `F.serifI` (Instrument Serif Italic) | teaser metadata, "M/V", big English accents |
 | System | `F.mono` (JetBrains Mono), `F.grotesk` | UI, specs, timecodes, charts |
 
@@ -48,7 +48,7 @@ Presenters in `05_lyrics.js`: `lyHero` (giant per-character slam), `lySide` (lef
 ### The anchor + the one transition device
 - **Anchor:** the pull-out motion itself, `E.soft` (a critically damped glide: fast pull, long silent settle). Something slides out with this curve in **every shot**: a basket, a drawer of type, a panel, a UI window, a row of dancers.
 - **Chapter transitions** are automatic: "the pull" (the next scene glides in like a soft-close drawer, with a steel edge, at 23.0 / 38.5 / 59.0 / 73.0 / 95.4 / 109.4 / 123.5 / 135.9). **Inside chapters, use hard cuts on beats.** Match-cuts (same shape and position across a cut) are encouraged.
-- Shots must keep rendering sensibly for up to 0.6 s past their end (the outgoing shot runs under the transition).
+- Shots must keep rendering sensibly for up to 0.6 s past their end (the outgoing shot runs under the transition), and from 0.16 s BEFORE their start (lt may be negative: the incoming shot is painted while it slides in).
 
 ### Motion rules
 - Every shot moves: the camera drifts or pushes, the 3D camera orbits, type slides, dancers dance. Nothing is ever frozen.

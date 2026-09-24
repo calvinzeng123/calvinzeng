@@ -246,22 +246,36 @@ function blackDisc(cx, cy, R, o = {}) {
 }
 
 // ---- LAN kneeling in profile, facing screen-right, head-first into something; legs kick on 8ths ----
-function kneelLan(Kx, Ky, U, t) {
+// (Kx, Ky) = knee on the floor; `into` = screen point the torso dives toward (hidden by the caller's clip).
+function kneelLan(Kx, Ky, U, t, into) {
   const lw = .2 * U, st = (pts, sd, w = lw, tp = [.1, .15]) => inkStroke(pts, { w, taper: tp, wob: .5, seed: 300 + sd, press: .2 });
-  const jig = Math.sin(t * 17), H = [Kx - .3 * U + jig * .1 * U, Ky - 2.15 * U - Math.abs(jig) * .12 * U];
-  const ta = -.2 + Math.sin(t * 23) * .05, N = [H[0] + Math.cos(ta) * 3.3 * U, H[1] + Math.sin(ta) * 3.3 * U];
+  const jig = Math.sin(t * 17), H = [Kx - .55 * U + jig * .12 * U, Ky - 2.3 * U - Math.abs(jig) * .1 * U];
+  const N = into ?? [H[0] + 3.2 * U, H[1] + 1.1 * U];
   for (const sd of [1, 0]) {   // far leg first
-    const k = Math.max(0, Math.sin((bp(t) * 2 + sd) * Math.PI)), a = Math.PI + .08 + k * 1.15, kx = Kx + sd * .38 * U;
+    const k = Math.max(0, Math.sin((bp(t) * 2 + sd) * Math.PI)), a = Math.PI + .06 + k * 1.25, kx = Kx + sd * .42 * U;
     const Fx = kx + Math.cos(a) * 2.1 * U, Fy = Ky + Math.sin(a) * 2.1 * U;
-    st([[H[0] + sd * .2 * U, H[1] + .2 * U], [kx, Ky]], 1 + sd, lw, [.02, .05]);
-    st([[kx, Ky], [Fx, Fy], [Fx + Math.cos(a - 1.45) * .55 * U, Fy + Math.sin(a - 1.45) * .55 * U]], 3 + sd, lw, [.02, .25]);
-    if (k > .92) for (let j = 0; j < 3; j++) { const aa = a - .9 + j * .45; line(Fx + Math.cos(aa) * .7 * U, Fy + Math.sin(aa) * .7 * U, Fx + Math.cos(aa) * 1.05 * U, Fy + Math.sin(aa) * 1.05 * U, 3, PAL.ink, .8); }
+    st([[H[0] + sd * .25 * U, H[1] + .15 * U], [kx, Ky]], 1 + sd, lw, [.02, .05]);
+    const fa = a + Math.PI / 2 + .15;   // cast-style foot: a short stroke off the ankle
+    st([[kx, Ky], [Fx, Fy], [Fx + Math.cos(fa) * .6 * U, Fy + Math.sin(fa) * .6 * U]], 3 + sd, lw, [.02, .3]);
+    if (k > .9) for (let j = 0; j < 3; j++) { const aa = a - 1 + j * .5; line(Fx + Math.cos(aa) * .8 * U, Fy + Math.sin(aa) * .8 * U, Fx + Math.cos(aa) * 1.15 * U, Fy + Math.sin(aa) * 1.15 * U, 3.5, PAL.ink, .85); }
   }
-  // shorts: a solid ink shape so the bottom reads at thumbnail size
-  const sh = [[.55, -.5], [-.1, -.72], [-.72, -.5], [-.95, -.02], [-.72, .42], [-.18, .55], [.4, .42], [.62, .02]].map(([a, b]) => [H[0] + a * U, H[1] + b * U]);
+  // torso slopes down from the raised hips into the dark
+  const ang = Math.atan2(N[1] - H[1], N[0] - H[0]), W0 = [H[0] + Math.cos(ang) * .45 * U, H[1] + Math.sin(ang) * .45 * U];
+  st([W0, [lerp(W0[0], N[0], .5), lerp(W0[1], N[1], .5) - .1 * U], N], 7, lw * 1.15, [.02, .02]);
+  // shorts: a small solid shape with a paper waistband
+  const R2 = (a, b) => { const [x, y] = rot2(a * U, b * U, ang * .6); return [H[0] + x, H[1] + y]; };
+  const sh = [[.5, -.36], [-.2, -.5], [-.66, -.3], [-.7, .16], [-.36, .46], [.12, .44], [.5, .2]].map(([a, b]) => R2(a, b));
   X.save(); X.fillStyle = PAL.ink; smoothPath(sh, true); X.fill(); X.restore();
-  st([[H[0] + .4 * U, H[1] - .3 * U], [lerp(H[0], N[0], .5), lerp(H[1], N[1], .5) - .15 * U], N], 7, lw * 1.05, [.02, .02]);
+  inkStroke([R2(.32, -.42), R2(.46, .3)], { w: .09 * U, col: PAL.paper, taper: [.1, .1], wob: .3, seed: 318 });
+  for (let j = 0; j < 2; j++) { const r = (1.05 + j * .32) * U, a0 = Math.PI * .95 + jig * .12; inkStroke(ell(H[0], H[1] - .1 * U, r, r * 1.1, 0, a0, a0 + .75, 10), { w: .07 * U, taper: [.3, .3], seed: 320 + j, a: .8 }); }
   return { H, N };
+}
+// LAN's arm reaching back out of the dark, flinging things over her shoulder on the 8ths
+function flingArm(S, U, t) {
+  const ph = bp(t) * 2, sw = Math.sin(ph * Math.PI), a1 = -2.25 + .55 * sw, a2 = a1 - .5 - .45 * sw;
+  const E1 = [S[0] + Math.cos(a1) * 1.9 * U, S[1] + Math.sin(a1) * 1.9 * U], Hd = [E1[0] + Math.cos(a2) * 1.7 * U, E1[1] + Math.sin(a2) * 1.7 * U];
+  inkStroke([S, E1, Hd], { w: .19 * U, taper: [.05, .2], wob: .5, seed: 340, press: .2 });
+  return Hd;
 }
 
 // ---- a gripping hand (arm enters along +x in local space), for the first pull ----
@@ -431,24 +445,25 @@ function sKneel(t, lt) {
   cabBody(C, G);
   fillPoly(G.open, PAL.ink);
   // LAN: knees on the floor in front of the opening; everything that enters the opening is swallowed
-  const K = P2(C, [0, 0, 420]), U = 84;
-  X.save(); X.globalAlpha = .1; X.fillStyle = PAL.ink; X.beginPath(); X.ellipse(K[0] - 120, K[1] + 6, 210, 16, 0, 0, TAU); X.fill(); X.restore();
+  const K = P2(C, [0, 0, 440]), U = 98;
+  X.save(); X.globalAlpha = .1; X.fillStyle = PAL.ink; X.beginPath(); X.ellipse(K[0] - 130, K[1] + 6, 230, 17, 0, 0, TAU); X.fill(); X.restore();
+  const ob = G.open[0], ot = G.open[3], into = [ob[0] + 70, lerp(ob[1], ot[1], .06)];
   X.save(); X.beginPath(); X.rect(0, 0, W, H); X.moveTo(G.open[0][0], G.open[0][1]); for (const q of G.open) X.lineTo(q[0], q[1]); X.closePath(); X.clip('evenodd');
-  kneelLan(K[0], K[1], U, t);
+  kneelLan(K[0], K[1], U, t, into);
   X.restore();
   // inside the dark: rummaging marks in paper colour
   X.save(); poly(G.open); X.clip();
   const oc = [(G.open[0][0] + G.open[2][0]) / 2, (G.open[0][1] + G.open[2][1]) / 2];
-  for (let i = 0; i < 3; i++) { const a = t * 9 + i * 2.1, r = 40 + i * 16; inkStroke(ell(oc[0] + 10, oc[1] + 60, r, r * .6, 0, a, a + 1.4, 14), { w: 3.5, col: PAL.paper, taper: [.2, .6], seed: 330 + i, a: .8 }); }
-  text('?', oc[0] + 34 + Math.sin(t * 8) * 6, oc[1] - 30, { size: 64, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: .15 });
-  text('?', oc[0] - 34, oc[1] - 70 + Math.cos(t * 7) * 5, { size: 44, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: -.2, a: .8 });
+  for (let i = 0; i < 3; i++) { const a = t * 9 + i * 2.1, r = 40 + i * 16; inkStroke(ell(oc[0] + 10, oc[1] + 90, r, r * .6, 0, a, a + 1.4, 14), { w: 3.5, col: PAL.paper, taper: [.2, .6], seed: 330 + i, a: .8 }); }
+  text('?', oc[0] + 44 + Math.sin(t * 8) * 6, oc[1] - 20, { size: 72, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: .15 });
+  text('?', oc[0] - 20, oc[1] - 70 + Math.cos(t * 7) * 5, { size: 48, font: F.heavy, weight: 900, col: PAL.paper, align: 'center', rot: -.2, a: .8 });
   X.restore();
-  // stuff tossed out over her shoulder, on the 8ths
-  const tossK = ['lid', 'spoon', 'bowl', 'cup', 'chop', 'plate'];
-  for (let i = 0; i < 6; i++) {
-    const t0 = 7.9 + i * .17, a = t - t0; if (a < 0 || a > 1.4) continue;
-    const vx = -(620 + hash(i) * 380), vy = -(760 + hash(i + 4) * 300), x = oc[0] - 20 + vx * a, y = oc[1] + 20 + vy * a + 1500 * a * a;
-    ware(tossK[i], x, y, 34 + hash(i + 9) * 12, a * (7 + i) * (i % 2 ? 1 : -1), { seed: 350 + i });
+  // stuff flung out of the cabinet over her back, on the 8ths
+  const tossK = ['lid', 'spoon', 'bowl', 'cup', 'chop', 'plate', 'spat'];
+  for (let i = 0; i < 7; i++) {
+    const t0 = BT(11.25) + i * BEAT / 2, a = t - t0; if (a < 0 || a > 1.5) continue;
+    const vx = -(560 + hash(i) * 360), vy = -(820 + hash(i + 4) * 260), x = ot[0] + 30 + vx * a, y = lerp(ob[1], ot[1], .45) + vy * a + 1500 * a * a;
+    ware(tossK[i], x, y, 40 + hash(i + 9) * 14, a * (7 + i) * (i % 2 ? 1 : -1), { seed: 350 + i, w: 3.4 });
   }
   lyMarker(2, t, { x: 118, y: 250, size: 150, align: 'left', rot: -.05 });
 }

@@ -117,7 +117,7 @@
     rect(FX - 8, top - 12, depth + 20, 10, PAL.ink);
     rect(FX + 6, gy - 14, depth - 4, 14, PAL.paper); ln(FX + 6, gy - 14, FX + 6, gy, 1.6); ln(FX + 6, gy - 14, FX + depth + 8, gy - 14, 1.6);
     // rail (telescoping) visible between the front and the carcass
-    ln(fx + 10, (top + bot) / 2 + 20, FX + 20, (top + bot) / 2 + 20, 1.5, PAL.steel0);
+    if (ext > 12) ln(fx + 10, (top + bot) / 2 + 20, FX, (top + bot) / 2 + 20, 1.5, PAL.steel0);
     // drawer front + bar handle
     rect(fx - 9, top + 2, 9, bot - top - 2, PAL.paper); stroke(() => X.rect(fx - 9, top + 2, 9, bot - top - 2), 2.2);
     stroke(() => { X.moveTo(fx - 9, hy - 7); X.lineTo(fx - 17, hy - 7); X.lineTo(fx - 17, hy + 7); X.lineTo(fx - 9, hy + 7); }, 2.4);
@@ -366,7 +366,7 @@
   const ex = u => EX0 + u * EQ, ey = y => EFY - y * EQ;
   const BOTTLE_B = [[PROF.bottle, '酱', 1], [PROF.tall.map(([r, y]) => [r * .92, y * .82]), '油', 0], [PROF.bottle, '醋', 1], [PROF.jar.map(([r, y]) => [r * 1.1, y * 1.2]), '糖', 0]];
   const BOTTLE_T = [[PROF.jar, '椒', 0], [PROF.jar.map(([r, y]) => [r * .9, y * 1.25]), '粉', 1], [PROF.jar, '盐', 0], [PROF.jar.map(([r, y]) => [r * .85, y * .95]), '茴', 1]];
-  function profile(u, y0, prof, label, lift = 0) {
+  function profile(u, y0, prof, label, lift = 0, hot = 0) {
     const L = prof.map(([r, y]) => [ex(u - r), ey(y0 + y) - lift]), R = prof.map(([r, y]) => [ex(u + r), ey(y0 + y) - lift]).reverse();
     const pts = L.concat(R);
     fillPoly(pts, PAL.paper); stroke(() => poly(pts), 2.2);
@@ -374,10 +374,11 @@
     const hTop = prof[prof.length - 1][1], rMid = prof[Math.floor(prof.length / 2)][0];
     const by = y0 + Math.min(hTop * .42, 60), bh = 26;
     stroke(() => X.rect(ex(u - rMid * .82), ey(by + bh) - lift, rMid * 1.64 * EQ, bh * EQ), 1.2, PAL.ink, .8);
-    text(label, ex(u), ey(by + bh / 2) + 7 - lift, { size: 20, font: F.serif, weight: 700, align: 'center' });
+    if (hot > 0) rect(ex(u - rMid * .82), ey(by + bh) - lift, rMid * 1.64 * EQ, bh * EQ, PAL.orange, hot);
+    text(label, ex(u), ey(by + bh / 2) + 7 - lift, { size: 20, font: F.serif, weight: 700, align: 'center', col: hot > .5 ? PAL.paper : PAL.ink });
     return [ex(u), ey(y0 + hTop / 2) - lift, hTop * EQ];
   }
-  function elevation(t, ext, lift) {
+  function elevation(t, ext, lift, hot = 0) {
     const back = 0, front = 560, du = ext;
     // floor, toe-kick, carcass in section (hatched cut members)
     ln(EX0 - 60, EFY, ex(1100), EFY, 2.2);
@@ -401,7 +402,7 @@
     const tiers = [160, 470], pos = [60, 160, 262, 362];
     let salt = null;
     BOTTLE_B.forEach(([pf, lab], i) => profile(ub + pos[i], tiers[0] + 4, pf, lab));
-    BOTTLE_T.forEach(([pf, lab], i) => { const r = profile(ub + pos[i], tiers[1] + 4, pf, lab, lab === '盐' ? lift : 0); if (lab === '盐') salt = r; });
+    BOTTLE_T.forEach(([pf, lab], i) => { const r = profile(ub + pos[i], tiers[1] + 4, pf, lab, lab === '盐' ? lift : 0, lab === '盐' ? hot : 0); if (lab === '盐') salt = r; });
     X.save(); X.strokeStyle = PAL.ink; X.lineWidth = 1; X.globalAlpha *= .5; X.beginPath();
     for (let u = ub + 14; u < uf - 6; u += 22) for (const [y0, y1] of [[tiers[0], tiers[0] + 150], [tiers[1], tiers[1] + 120]]) { X.moveTo(ex(u), ey(y0)); X.lineTo(ex(u), ey(y1)); }
     X.stroke(); X.restore();
@@ -419,7 +420,8 @@
     paperBG();
     cam(CX, CY, 1 + .014 * E.io(lt / 2.1));
     const ext = lerp(250, 420, E.soft((t - T_ELEV + .04) / .9)), found = BT(151), lift = 70 * E.soft((t - LY[32].t[4]) / .8);
-    const salt = elevation(t, ext, lift);
+    const hot = clamp((t - found) / .12);
+    const salt = elevation(t, ext, lift, hot);
     // lyric left
     const R = lyType(32, t, { x: 124, y: 470, size: 118, weight: 900, lead: 150, dur: .4 });
     if (R) mono('32 /', 124, R[0].y - 150, { size: 15, a: E.soft(lt / .6) });
@@ -433,7 +435,7 @@
       if (lk > 0) {
         X.save(); X.beginPath(); X.arc(lx, ly, rr - 2, 0, TAU); X.clip(); X.globalAlpha *= lk;
         rect(lx - rr, ly - rr, rr * 2, rr * 2, PAL.paper);
-        X.translate(lx, ly); X.scale(1.55, 1.55); X.translate(-lx, -ly); elevation(t, ext, lift);
+        X.translate(lx, ly); X.scale(1.55, 1.55); X.translate(-lx, -ly); elevation(t, ext, lift, hot);
         X.restore();
       }
       circle(lx, ly, rr, { stroke: PAL.cobalt, w: 3.2 });
@@ -521,7 +523,7 @@
     for (let x = -600; x <= 4200; x += 300) { const a = P2([x, 0, 0]), b = P2([x, 0, 1800]); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); }
     for (let z = 0; z <= 1800; z += 300) { const a = P2([-600, 0, z]), b = P2([4200, 0, z]); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); }
     X.stroke(); X.globalAlpha /= .14; X.globalAlpha *= .45; X.beginPath();
-    for (const [a, b] of [[[-300, 0, 0], [-300, 2500, 0]], [[3800, 2500, 0], [3800, 0, 0]], [[-300, 0, 0], [3800, 0, 0]]]) { const qa = P2(a), qb = P2(b); X.moveTo(qa[0], qa[1]); X.lineTo(qb[0], qb[1]); }
+    for (const [a, b] of [[[-300, 0, 0], [-300, 1150, 0]], [[3800, 2500, 0], [3800, 0, 0]], [[-300, 0, 0], [3800, 0, 0]]]) { const qa = P2(a), qb = P2(b); X.moveTo(qa[0], qa[1]); X.lineTo(qb[0], qb[1]); }
     X.stroke(); X.restore();
     // 1 · tall pantry (far end): a tall frame of tiered baskets slides out as one
     {
@@ -550,7 +552,7 @@
       const P = [];
       for (let i = WALL.length - 1; i >= 0; i--) {
         const [x0, x1] = WALL[i];
-        P.push(...boxModel(x0, 1480, 0, x1, 2240, 360, { sides: i === 1 ? 'lrtbk' : 'lrtbk', iw: IW }));
+        P.push(...boxModel(x0, 1480, 0, x1, 2240, 360, { sides: 'lrtbk', iw: IW }));
         if (i !== 1) P.push(...doorModel(x0 + 4, 1484, x1 - 4, 2236, 378, { th: 18, iw: IW, handle: false }));
       }
       R3(P);

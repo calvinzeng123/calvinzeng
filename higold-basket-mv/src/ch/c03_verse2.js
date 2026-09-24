@@ -325,7 +325,7 @@
       r1.forEach(c => { const k = chK(c.ti, t, .18), cw = measure(c.ch, 84, F.heavy, 900) - 2;
         if (k > 0) text(c.ch, xx, yT + 88 - (1 - E.out5(k)) * 26, { size: 84, font: F.heavy, weight: 900, col: PAL.ink, a: clamp(k * 3) });
         xx += cw; });
-      if (chK(r1[0].ti, t) > 0) inkStroke([[xx + 22, yT + 80], [xx + 22, yT + 10]], { w: 4, taper: [.05, .05], seed: 310 }), inkStroke([[xx + 10, yT + 24], [xx + 22, yT + 6], [xx + 34, yT + 24]], { w: 4, taper: [.1, .1], seed: 311 });
+      if (chK(r1[3].ti, t) > 0) inkStroke([[xx + 22, yT + 80], [xx + 22, yT + 10]], { w: 4, taper: [.05, .05], seed: 310 }), inkStroke([[xx + 10, yT + 24], [xx + 22, yT + 6], [xx + 34, yT + 24]], { w: 4, taper: [.1, .1], seed: 311 });
       // row 2 rides the curve
       lyRows(14)[1].forEach((c, j) => {
         const k = chK(c.ti, t, .2); if (k <= 0) return; const [cx2, cy2] = CPOS[j];
@@ -543,6 +543,7 @@
     const D = 1, gz = .06, fog = 13, near = .35;
     const iMin = Math.floor(zc + near), iMax = Math.min(Math.floor(zc + 34), Math.floor(Z_END - .01));
     const blur = clamp((v - 8) / 40);                                     // cross-lines fade at high speed (motion blur)
+    const hotRings = KICKS.filter(tk => t > tk - .1).map(tk => Math.floor(zCam(tk) + 9));
     X.save(); X.lineJoin = 'round';
     for (let i = iMax; i >= iMin; i--) {
       const z0 = Math.max(i * D + gz, zc + near), z1 = (i + 1) * D - gz; if (z1 <= z0) continue;
@@ -550,7 +551,7 @@
       if (al < .02) continue;
       // pull-out: drawers slide inward as the camera arrives (E.soft in the camera's own time)
       const e = .32 * E.soft(clamp((7 - dm) / 5.5));
-      const ringHot = KICKS.some(tk => Math.abs(i - Math.floor(zCam(tk) + 9)) < .5 && t > tk - .1);
+      const ringHot = hotRings.includes(i);
       // walls: [axis, fixed coordinate sign, cells across]
       for (const [ax, sg, n] of [['x', -1, 3], ['x', 1, 3], ['y', -1, 5], ['y', 1, 5]]) {
         for (let c = 0; c < n; c++) {
@@ -563,7 +564,7 @@
           if (ins > .01) {
             // near face of the pulled box (faces the camera), then the front panel
             poly([back[0], back[1], front[1], front[0]]); X.fillStyle = PAL.night2; X.fill();
-            X.strokeStyle = PAL.steel2; X.lineWidth = 1.2; X.stroke();
+            X.globalAlpha = al; X.strokeStyle = PAL.steel2; X.lineWidth = 1.2; X.stroke();
             // wire uprights on the near face
             X.beginPath(); for (let k = 1; k < 4; k++) { const a = lerpP(back[0], back[1], k / 4), b = lerpP(front[0], front[1], k / 4); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); }
             X.lineWidth = .9; X.stroke();

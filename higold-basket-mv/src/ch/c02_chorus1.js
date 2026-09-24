@@ -273,7 +273,7 @@
       X.beginPath(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { X.moveTo(cx + dx * r * .5, cy + dy * r * .5); X.lineTo(cx + dx * r * 1.5, cy + dy * r * 1.5); } X.stroke(); X.restore();
     }
     text(`SCAN ${String(found).padStart(2, '0')} / 06`, 110, 330, { size: 26, font: F.mono, weight: 700, col: PAL.cobalt, track: 3, a: clamp(lt / .2) });
-    if (t >= T8[5] + .05) toast(110, 760, 470, '调料已全部找到', '拉出来，一目了然', { k: clamp((t - T8[5] - .05) / .3), icon: '✓' });
+    if (t >= T8[5]) toast(110, 760, 470, '调料已全部找到', '拉出来，一目了然', { k: clamp((t - T8[5]) / .16), icon: '✓' });
     lySide(8, t, { x: 110, y: 560, size: 104 });
   }
 
@@ -395,6 +395,10 @@
     const [shx, shy] = shake(t, 8 * dec(t, T11[4], 11), 3);
     cam(CX + shx, CY + shy, z);
     dotGrid(24, 24, W, H, 48, 1.4, PAL.ink, .07);
+    // 开 = open: a giant faint basket behind the line glides out toward camera on the drawer curve
+    const ok = E.soft((t - T11[4] + .04) / .8);
+    const BC = frameCam([0, 90, 220 + 300 * ok], .55 + lt * .12, .38, CX, 600 - 40 * ok, 700, lerp(620, 1700, ok), { fov: 26 });
+    render3(basketModel({ w: 560, d: 440, h: 170, type: 'dish' }), BC, { style: 'ink', a: lerp(.05, .085, ok) });
     const sk = dec(t, T11[4], 5);
     if (sk > .02) speedLines(CX, 560, 420, 1400, 70, { a: .22 * sk, w: 10, seed: 5 });
     stageFloor(1030);
@@ -425,11 +429,17 @@
     const lx = 1340, P = poseAt(t, [[-9, KP.ready], [C_HEART, HOLD, .14], [T11[6], pose({ ...HOLD, dy: -.12, kL: .3, kR: .3 }), .1], [T11[7], HOLD, .15]]);
     const beat = .05 * pulse(t, 5) + .1 * dec(t, T11[6], 6), R = 235 * (1 + beat) * E.out5(lt / .22 + .05);
     wireHeart(lx, 300, R, { k: E.out5(lt / .28), w: 13 });
+    // 都 = all of them: the crew cheers behind her, each gets a small wire heart that pops on 心
+    [['pony', 1085], ['buns', 1205], ['long', 1475], ['kit', 1595]].forEach(([who, x], j) => {
+      const Pc = poseAt(t, [[-9, KP.ready], [C_HEART + .04 * j, HOLD, .14], [T11[6], pose({ ...HOLD, dy: -.1, kL: .25, kR: .25 }), .1], [T11[7], HOLD, .15]]);
+      const hk = E.back(clamp((t - T11[6] - .03 * j) / .22), 2), f = figure(x, 944, 20, Pc, { who, face: 'happy', seed: 20 + j * 3, a: .9 });
+      if (hk > 0) wire2(heartPath(f.head[0], f.head[1] - 108, 34 * hk * (1 + .08 * pulse(t, 6)), 40), 5.5);
+    });
     figure(lx, 1000, 42, P, { who: 'lan', face: 'happy', blush: 1.4, seed: 11 });
     // small wire hearts float up, one per 8th
-    for (let j = 0; j < 7; j++) {
-      const t0 = C_HEART + j * .17, age = t - t0; if (age < 0) continue;
-      const x = lx + (j % 2 ? 1 : -1) * (300 + hash(j * 7) * 180), y = 820 - age * (300 + hash(j) * 160), r = 30 + hash(j * 3) * 26;
+    for (let j = 0; j < 4; j++) {
+      const t0 = C_HEART + .1 + j * .24, age = t - t0; if (age < 0) continue;
+      const x = lx + 330 + (j % 2) * 150 + hash(j * 7) * 40, y = 760 - age * (300 + hash(j) * 160), r = 26 + hash(j * 3) * 20;
       wire2(heartPath(x + Math.sin(age * 4 + j) * 18, y, r * E.back(clamp(age / .25)), 40), 5.5, { a: clamp(2.2 - age) });
     }
     camEnd();

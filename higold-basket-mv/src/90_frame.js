@@ -38,7 +38,7 @@ window.SPECIMEN = () => {
 (async () => {
   makePaper();
   const fams = [['900 80px NotoSans', '拉篮一就到位'], ['400 80px NotoSans', '拉篮'], ['900 80px NotoSerif', '拉篮'], ['80px Smiley', '拉篮'], ['80px Qingke', '拉篮'],
-    ['80px Mang', '拉篮'], ['80px LongCang', '拉篮'], ['80px Anton', 'A'], ['80px Instrument', 'A'], ['80px InstrumentI', 'A'], ['600 80px Mono', 'A'], ['700 80px Grotesk', 'A'], ['80px Archivo', 'A']];
+    ['80px Mang', '拉篮'], ['80px MaShan', '一拉就到位嗒跪着翻找退休了'], ['80px LongCang', '拉篮'], ['80px Anton', 'A'], ['80px Instrument', 'A'], ['80px InstrumentI', 'A'], ['600 80px Mono', 'A'], ['700 80px Grotesk', 'A'], ['80px Archivo', 'A']];
   await Promise.all(fams.map(([f, s]) => document.fonts.load(f, s).catch(e => console.warn('font', f, e))));
   await document.fonts.ready;
   window.ready = true;

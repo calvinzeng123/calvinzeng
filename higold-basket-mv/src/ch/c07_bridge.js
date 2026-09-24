@@ -166,7 +166,7 @@ function lyHome(i, t, o = {}) {
 // A/B · a golden spiral of drawers (一格一格 / 往外拉): each pull reveals the next, bigger drawer; the camera zooms out
 // exponentially so the newest drawer keeps its size while the older ones shrink into the spiral's glowing eye.
 // =====================================================================================================================
-const SPN = 16, SPR0 = 250, SPB = .3, SPD = .62, SPTH0 = .4;
+const SPN = 16, SPR0 = 250, SPB = .3, SPD = .62, SPTH0 = -1.15;
 const PT = (() => {   // pull times: one per sung character, then an accelerating cascade (8ths → 16ths)
   const a = [...LY[34].t], add = (b0, step, n) => { for (let k = 0; k < n; k++) a.push(beatT(b0) + k * step); };
   add(162.5, BEAT / 2, 4); add(164.25, BEAT / 4, 5);
@@ -368,10 +368,10 @@ function drosteLevel(e, Z0, fx, fy, a) {
   const tx = fx - (c * DFIX[0] - s * DFIX[1]), ty = fy - (s * DFIX[0] + c * DFIX[1]);
   const vis = clamp((sc - 30) / 110) * a; if (vis <= 0) return;
   const D = drostePaths(), px = 1 / sc;   // one screen pixel in plan units
-  X.save(); X.setTransform(c, s, -s, c, tx, ty); X.globalAlpha = 1; X.lineCap = 'round'; X.lineJoin = 'round';
+  X.save(); X.setTransform(c, s, -s, c, tx + jit(3, .6), ty + jit(4, .6)); X.globalAlpha = 1; X.lineCap = 'round'; X.lineJoin = 'round';
   X.fillStyle = PAL.night; X.fill(D.rim);                 // the child sits on its parent's floor: hide what is under it
-  const st = (p, w, al, core = PAL.shine) => { X.globalAlpha = vis * al * .22; X.strokeStyle = PAL.steel2; X.lineWidth = w * 3.2 * px; X.stroke(p); X.globalAlpha = vis * al; X.strokeStyle = core; X.lineWidth = w * px; X.stroke(p); };
-  const zw = Math.min(2.2, sc / 700);      // line weight grows with the level's size (self-similar up to a cap)
+  const st = (p, w, al, core = PAL.shine) => { X.globalAlpha = vis * al * .16; X.strokeStyle = PAL.steel2; X.lineWidth = w * 3.2 * px; X.stroke(p); X.globalAlpha = vis * al; X.strokeStyle = core; X.lineWidth = w * px; X.stroke(p); };
+  const zw = Math.min(1.7, sc / 750);      // line weight grows with the level's size (self-similar up to a cap)
   st(D.slats, 1 * zw, .38); st(D.ups, 1.1 * zw, .55); st(D.fl, 1.4 * zw, .7); st(D.comb, 1.2 * zw, .6);
   X.globalAlpha = vis; X.fillStyle = PAL.night2; X.fill(D.plates); st(D.plates, 1.3 * zw, .95); st(D.cups, 1.2 * zw, .8);
   st(D.rim2, 1.4 * zw, .8); st(D.rim, 2.4 * zw, 1);
@@ -396,9 +396,10 @@ const HOME_SLOTS = (() => {
   for (let i = 0; i < 3; i++) S.push({ at: [x0 + w * .78, y0 + 6 + i * 20, d * .3], prof: PROF.bowl, ax: [0, 1, 0], open: i === 2 });
   S.push({ at: [x0 + w * .78, y0 + 6, d * .72], prof: PROF.cup, ax: [0, 1, 0], open: true }, { at: [x0 + w * .64, y0 + 6, d * .74], prof: PROF.cup, ax: [0, 1, 0], open: true });
   const L = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10].map(k => LY[37].t[0] + k * BEAT / 4);
+  const C0 = frameCam([0, 150, 220], -.58, .5, 1230, 610, 760, 800, { fov: 28 });
   S.forEach((s, j) => {
-    const a = hash(j * 7.3 + 2) * TAU, e = (hash(j * 3.1 + 5) - .3) * 1.1, dd = 700 + hash(j * 9.2) * 650;
-    s.from = [s.at[0] + Math.cos(a) * Math.cos(e) * dd * 1.35, s.at[1] + Math.sin(e) * dd * .9 + 150, s.at[2] + Math.sin(a) * Math.cos(e) * dd * .6 + 250];
+    const a = j * 2.39996 + .5, rad = 430 + hash(j * 9.2) * 330, dx = Math.cos(a) * rad * (Math.cos(a) < 0 ? .75 : 1.25), dy = Math.sin(a) * rad * .72, dz = (hash(j * 5.7) - .5) * 500;
+    s.from = vadd(s.at, vadd(vmul(C0.right, dx), vadd(vmul(C0.up, dy), vmul(C0.fwd, dz))));
     s.ax0 = vnorm([hash(j * 1.1) - .5, hash(j * 2.2) - .5, hash(j * 3.3) - .5]);
     s.land = L[j]; s.fly = .5 + hash(j * 4.4) * .12;
   });
@@ -422,7 +423,7 @@ function shotHome(t, lt) {
     const d = t - s.land; if (d >= 0 && d < .4) rings.push([C.project(s.at), d, j === HOME_SLOTS.length - 1]);
   });
   for (const [a, b] of trails) { X.beginPath(); X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); glowStroke(3, .55); }
-  render3(prims, C, { style: 'glow', dark: true, lw: 1 + punch * .25 });
+  render3(prims, C, { style: 'glow', dark: true, lw: .85 + punch * .25 });
   for (const [q, d, last] of rings) {
     const e = E.out(d / .4);
     circle(q[0], q[1], 10 + 70 * e, { stroke: last ? PAL.orange : PAL.paper, w: 3 * (1 - e) + .5, a: 1 - e });
@@ -439,8 +440,8 @@ function shotHome(t, lt) {
 const HC = 600, HR = 4, HRH = 320, HDEP = 560, HEXT = 540;
 function shotHorizon(t, lt) {
   const mv = clamp((t - T_HOR) / 2.1), ya = .5 - mv * .03, tl = -.02;     // a steady forward track along the stack
-  const eye = [-2900, 1350 + mv * 120, 3200 - mv * 2400];
-  const C = camera3({ eye, at: vadd(eye, [Math.sin(ya) * 1e4, Math.tan(tl) * 1e4, -Math.cos(ya) * 1e4]), fov: 44, cx: 1330, cy: 500 });
+  const eye = [-2350, 1200 + mv * 100, 2500 - mv * 2200];
+  const C = camera3({ eye, at: vadd(eye, [Math.sin(ya) * 1e4, Math.tan(tl) * 1e4, -Math.cos(ya) * 1e4]), fov: 42, cx: 1330, cy: 520 });
   const vp = C.project(vadd(eye, [0, 0, -1e9])), hy = vp[1];
   cosmos(t, { dx: -t * 20, clipY: hy - 4 });
   // floor grid below the horizon
@@ -452,7 +453,7 @@ function shotHorizon(t, lt) {
   for (let j = -6; j < 70; j++) { const z = -j * j * 60 - j * 600; const a = C.project([-12000, 0, z]), b = C.project([HDEP, 0, z]); if (a[2] > 5 && b[2] > 5) { X.moveTo(a[0], a[1]); X.lineTo(b[0], b[1]); } }
   glowStroke(1, .14);
   X.restore();
-  X.beginPath(); X.moveTo(0, hy); X.lineTo(W, hy); glowStroke(1.6, .75);
+  X.beginPath(); X.moveTo(0, hy); X.lineTo(W, hy); glowStroke(1.6 + pulse(t, 5) * 1.4, .7 + .3 * pulse(t, 5));   // the horizon ticks on the beat
   // the stack: HR drawers high, running to the vanishing point. Wave front grows exponentially in time (越拉越多).
   const t0 = LY[38].t[0], al = 2.35, J = t < t0 ? -1 : 4 * (Math.exp(al * (t - t0)) - 1), NC = 280;
   const P3 = (x, y, z) => C.project([x, y, z]), poly4 = q => { X.beginPath(); q.forEach((p, m) => m ? X.lineTo(p[0], p[1]) : X.moveTo(p[0], p[1])); X.closePath(); };
@@ -528,10 +529,14 @@ function lySlamRow(L, t, x0, y, sz, hi) {
 function shotSteady(t, lt) {
   const tt = Math.min(t, T_STOP), m = clamp((tt - T_STEADY) / (T_STOP - T_STEADY));   // linear clock that stops dead
   cosmos(t, { dx: -tt * 6, dy: tt * 2, glints: 3 });
-  galaxy({ x: 1480, y: 250, R: 260, spin: -(tt - T_GAL) * .34, ci: .38, pa: -.2, grow: 1, a: .32 }, t);
+  galaxy({ x: 1440, y: 230, R: 330, spin: -(tt - T_GAL) * .3, ci: .5, pa: -.2, grow: 1, a: .5 }, t);
   const ext = 380 * E.soft(clamp((t - T_STEADY) / (T_STOP - T_STEADY)));
-  const C = frameCam([0, 150, 250], -.66 + m * .1, .36 - m * .04, 1300, 640, 760, 620 + m * 90, { fov: 28 });
-  handLine(820, 900 + m * 10, 1850, 900 + m * 10, { w: 2, col: PAL.steel0, seed: 909 });
+  const C = frameCam([0, 150, 250], -.66 + m * .1, .36 - m * .04, 1330, 590, 760, 560 + m * 70, { fov: 28 });
+  const fl = pin(C, [-330, -20, 460]);
+  handLine(780, fl[1], 1860, fl[1], { w: 2, col: PAL.steel0, seed: 909 });
+  // LAN, calm, hands on hips beside the drawer; she stops with everything else
+  const lp = lerpPose(move('idle', tt, 3), KP.hips, .85);
+  figure(fl[0] - 190, fl[1], 17, lp, { who: 'lan', col: PAL.paper, dark: true, face: t >= T_STOP ? 'closed' : 'smile', blush: 1, shadow: false });
   render3(cabinetPrims(ext, { handle: t >= T_STOP ? PAL.orange : PAL.steel2 }), C, { style: 'glow', dark: true });
   // the damping trace: the soft-close curve drawing itself, flat at the downbeat
   const gx = 110, gy = 870, gw = 520, gh = 90, pk = clamp((t - T_STEADY) / (T_STOP - T_STEADY));
@@ -549,7 +554,8 @@ function shotSteady(t, lt) {
     const sz = 220, cs = 236, x0 = 110, y0 = 200;
     X.save(); X.globalAlpha *= env;
     [...L.text].forEach((ch, j) => {
-      const k = clamp((t - L.t[j] + .03) / .5), e = E.soft(k); if (k <= 0) return;
+      // 越 拉 越 glide in on the soft-close curve; 稳 arrives at speed and stops dead on the downbeat
+      const last = j === 3, k = last ? clamp((t - T_STOP + .2) / .2) : clamp((t - L.t[j] + .03) / .5), e = last ? Math.pow(k, 1.6) : E.soft(k); if (k <= 0) return;
       const x = x0 + (j % 2) * cs, y = y0 + Math.floor(j / 2) * cs;
       X.save(); X.beginPath(); X.rect(x - 6, y - 6, cs + 6, cs + 6); X.clip();
       text(ch, x + cs / 2 - (1 - e) * cs, y + cs * .5 + sz * .37, { size: sz, font: F.heavy, weight: 900, col: ch === '拉' ? PAL.orange : PAL.paper, align: 'center' });

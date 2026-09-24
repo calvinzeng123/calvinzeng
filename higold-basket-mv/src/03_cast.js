@@ -25,7 +25,7 @@ const KP = {
   yank: pose({ lean: -.16, dy: -.25, sR: .7, eR: -1.7, sL: .9, eL: -1.9, hL: .22, kL: .35, hR: .2, kR: .35, head: -.12, squash: .06 }),
   point: pose({ lean: -.05, sR: 2.5, eR: 0, sL: .3, eL: .4, hL: .1, hR: .22, head: .1 }),         // point up-right
   pointDown: pose({ lean: .1, sR: .85, eR: 0, sL: .4, eL: .5, hL: .25, kL: .3, hR: .1, head: .15 }),
-  armsUp: pose({ dy: .2, sL: 2.75, eL: .15, sR: 2.75, eR: .15, hL: .1, hR: .1 }),
+  armsUp: pose({ dy: .2, sL: 2.45, eL: .12, sR: 2.45, eR: .12, hL: .1, hR: .1 }),   // wide V so the arms clear the head
   heart: pose({ sL: 2.55, eL: 1.5, sR: 2.55, eR: 1.5, hL: .12, hR: .12, head: .05 }),              // arms curve over the head
   cross: pose({ sL: .35, eL: 2.35, sR: .35, eR: 2.35, hL: .08, hR: .08 }),                       // arms crossed "X"
   squat: pose({ dy: -.9, sL: .8, eL: .9, sR: .8, eR: .9, hL: .55, kL: 1.1, hR: .55, kR: 1.1, squash: .04 }),

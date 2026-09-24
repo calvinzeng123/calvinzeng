@@ -283,9 +283,8 @@ function liftFrame(th, o = {}) {
 }
 function liftSet(C, th, ro, o = {}) {
   const F0 = liftFrame(th, o);
-  // counter below (always behind the basket from these cameras)
-  render3([...boxN(-560, 0, 0, 560, 860, 580, 'lrtbkf'), ...boxN(-580, 860, 0, 580, 900, 610, 'lrtbkf'),
-    ...[[-552, -2], [2, 552]].flatMap(([a, b]) => [[20, 420], [428, 840]].flatMap(([c, d]) => [panelZ(a, c, b, d, 582), panelZ(a + 120, d - 46, b - 120, d - 36, 583, groove)]))], C, ro);
+  // the cabinet hangs on a bare gallery wall (white-cube exhibit): a hairline wall-mount rail behind it
+  wline(C, [-LD.x - 60, LD.y1 + 40, 0], [LD.x + 60, LD.y1 + 40, 0], { w: 2, col: PAL.ink2, a: .6 });
   const shell = boxN(-LD.x, LD.y0, 0, LD.x, LD.y1, LD.d, 'klrtb', { closed: false });
   stage(C, shell, F0.P, p => p[2] < LD.d - 4 && p[1] > LD.y0 && Math.abs(p[0]) < LD.x, ro, { back: o.back, out: o.out });
   return F0;
@@ -293,13 +292,12 @@ function liftSet(C, th, ro, o = {}) {
 function shotLift(t, lt, dur) {
   paperBG();
   const th = LD.TH * E.soft(seg(t, 82.6, 84.9));
-  const C = frameCam([0, 1560, 380], lerp(.76, .6, seg(t, 81.2, 85.4)), lerp(.08, .02, seg(t, 81.2, 85.4)), 1200, 470, 1420, 1000 + lt * 12, { fov: 30 });
+  const C = frameCam([0, 1560, 360], lerp(.76, .6, seg(t, 81.2, 85.4)), lerp(.08, .02, seg(t, 81.2, 85.4)), 1200, 540, 1420, 1000 + lt * 12, { fov: 30 });
   const ro = { style: 'steel', shine: lerp(-600, 700, seg(t, 82.5, 84.9)) };
   // wall: floor line + eye-level line
   wline(C, [-1500, 0, 0], [1600, 0, 0], { w: 1.5, col: PAL.ink2, a: .55 });
-  wline(C, [-1500, 1480, 0], [1600, 1480, 0], { w: 2, col: PAL.ink2, a: .7, dash: [16, 12] });
-  const el = P2(C, [-1150, 1480, 0]); text('视平线  ·  eye level', el[0] + 10, el[1] - 16, { size: 28, font: F.serifI, col: PAL.ink2 });
-  wfill(C, [[-600, 0, -10], [600, 0, -10], [620, 0, 660], [-600, 0, 660]], PAL.ink, .05);
+  wline(C, [-1500, 1100, 0], [1600, 1100, 0], { w: 2, col: PAL.ink2, a: .7, dash: [16, 12] });
+  const el = P2(C, [-1150, 1100, 0]); text('视平线  ·  eye level', el[0] + 10, el[1] - 16, { size: 28, font: F.serifI, col: PAL.ink2 });
   const arc = (th1, x) => { const pts = []; for (let i = 0; i <= 40; i++) { const a = th1 * i / 40; pts.push([x, 1860 - LD.R + LD.R * Math.cos(a), 300 + LD.R * Math.sin(a)]); } return pts; };
   const F0 = liftSet(C, th, ro, {
     out: () => {
@@ -316,22 +314,21 @@ function shotLift(t, lt, dur) {
 // ======================================================================================================
 // LAN meets the lift-down basket (84.87 – 88.145): tiptoe → the basket comes down → flat feet, jar in hand.
 // ======================================================================================================
-const TIP = pose({ dy: .38, sL: 2.2, eL: .45, sR: .75, eR: .5, hL: .02, hR: .02, head: -.1, lean: -.1 });
-const REACH = pose({ sL: 1.72, eL: .15, sR: .3, eR: .35, hL: .1, hR: .1, head: -.05, lean: -.05 });
+const TIP = pose({ dy: .45, sL: 2.3, eL: .3, sR: .55, eR: .45, hL: .02, hR: .04, head: .5, lean: -.16 });
+const REACH = pose({ sL: 1.9, eL: .1, sR: .3, eR: .35, hL: .1, hR: .1, head: -.05, lean: -.05 });
 const PROUD = pose({ sL: 2.5, eL: .35, sR: .9, eR: -1.9, hL: .12, hR: .12, head: .08 });
 function shotTiptoe(t, lt, dur) {
   paperBG();
   const th = LD.TH * E.soft(seg(t, 86.02, 87.35)), push = seg(t, 84.8, 88.8);
-  const C = frameCam([330, 1080, 420], .1 - push * .04, .03, 1180, 548, 2650 - push * 140, 1000, { fov: 30 });
+  const C = frameCam([220, 1060, 420], .1 - push * .04, .03, 1190, 520, 2300 - push * 120, 1000, { fov: 30 });
   const ro = { style: 'steel', shine: lerp(-600, 800, seg(t, 86, 87.6)) };
   wline(C, [-1500, 0, 0], [2400, 0, 0], { w: 1.5, col: PAL.ink2, a: .55 });
-  wline(C, [-1500, 1480, 0], [2400, 1480, 0], { w: 2, col: PAL.ink2, a: .4, dash: [16, 12] });
-  wfill(C, [[-600, 0, -10], [600, 0, -10], [620, 0, 660], [-600, 0, 660]], PAL.ink, .05);
+  wline(C, [-1500, 1100, 0], [2400, 1100, 0], { w: 2, col: PAL.ink2, a: .4, dash: [16, 12] });
   const take = t > 87.42;
   liftSet(C, th, ro, { take });
 
   // LAN stands beside the counter; scale from the camera so she matches the set (≈160 mm per body unit)
-  const g = C.project([660, 0, 700]), s = g[3] * 160, lw = .12;
+  const g = C.project([540, 0, 560]), s = g[3] * 118, lw = .16;
   const land = E.out5(seg(t, 86.7, 86.9)), lift = E.out5(seg(t, 87.42, 87.62));
   let P = lerpPose(TIP, REACH, land); if (lift > 0) P = lerpPose(P, PROUD, lift);
   if (land < 1) { const w = Math.sin(t * 8.5) * (1 - land); P = { ...P, lean: P.lean + w * .05, dy: P.dy + Math.abs(Math.sin(t * 17)) * .05 * (1 - land) }; }
@@ -341,6 +338,10 @@ function shotTiptoe(t, lt, dur) {
   }
   const face = lift > .3 ? 'star' : land > .5 ? 'happy' : 'o';
   const fig = figure(g[0], g[1], s, P, { who: 'lan', face, blush: land, seed: 11, w: lw });
+  if (land < .6) {   // tiptoe: little wobble arcs under the lifted heels
+    const a = 1 - land / .6;
+    for (const sd of [-1, 1]) { const fx = g[0] + sd * s * .9, fy = g[1] - s * .12; inkStroke([[fx - s * .35, fy + s * .05], [fx, fy - s * .08], [fx + s * .35, fy + s * .05]], { w: 2.5, a, seed: 40 + sd }); }
+  }
   if (land < .5) {   // strain marks while on tiptoe
     const [hx, hy, hr] = fig.head, bk = pulse(t, 5);
     inkStroke([[hx + hr * 1.45, hy - hr * .35], [hx + hr * 1.95, hy - hr * .55]], { w: 3.5, seed: 3 });
@@ -390,20 +391,24 @@ function spotlight(t, a = 1) {
   line(sx - 6, 56, sx, 64, 3, PAL.ink);
 }
 function statue(t, o = {}) {
-  // plaster figure squatting, head and arms swallowed by a small cabinet (the old habit, frozen)
-  const gy = MU.py - 8, fx = 1118, s = 29, bx = fx + 96, cw = 176, ch = 196, bt = gy - ch;
-  // plaque under the group
+  // plaster figure on its knees, bottom up, head and arms swallowed by a small cabinet (the old habit, frozen)
+  const gy = MU.py - 8, cw = 150, ch = 190, bx = 1256, bt = gy - ch;
   fillPoly([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4], [1080, gy - 4]], PAL.paper2);
   inkStroke([[1070, gy + 4], [1420, gy + 4], [1430, gy - 4]], { w: 1.8, col: PAL.ink2, seed: 88, taper: [.01, .01] });
-  figure(fx, gy, s, STATUE, { who: 'statue', col: PAL.ink, face: 'closed', seed: 77, shadow: false, fill: PAL.paper, w: .19 });
+  const st = (pts, sd, w = 6.5) => inkStroke(pts, { w, seed: 700 + sd, taper: [.08, .12], wob: .4, press: .15 });
+  // far leg, near leg: shins flat on the plinth, thighs up to a round, proud bottom; the back runs into the cabinet
+  st([[bx - 178, gy - 16], [bx - 172, gy - 4], [bx - 106, gy - 4], [bx - 92, gy - 62]], 1, 6);
+  st([[bx - 196, gy - 18], [bx - 190, gy - 5], [bx - 122, gy - 5], [bx - 104, gy - 60]], 2, 7);
+  st([[bx - 104, gy - 60], [bx - 132, gy - 72], [bx - 132, gy - 104], [bx - 104, gy - 120], [bx - 50, gy - 118], [bx + 24, gy - 106]], 3, 8);
+  // one arm braced on the plinth
+  st([[bx - 22, gy - 110], [bx - 28, gy - 56], [bx - 18, gy - 6], [bx - 2, gy - 6]], 4, 6);
   // the cabinet: dark interior swallowing head and arms, carcass edges, the door swung open
   X.save(); X.beginPath(); X.rect(bx, bt, cw, ch); X.rect(bx + 14, bt + 14, cw - 28, ch - 28); X.fillStyle = PAL.paper; X.fill('evenodd'); X.restore();
   rect(bx + 14, bt + 14, cw - 28, ch - 28, PAL.ink);
   handRect(bx, bt, cw, ch, { w: 3, seed: 91, over: 3 });
-  handRect(bx + 14, bt + 14, cw - 28, ch - 28, { w: 1.6, seed: 95, over: 0 });
   X.save(); X.globalAlpha *= .5; hatch([[bx, bt], [bx + cw, bt], [bx + cw, bt + 14], [bx, bt + 14]], { gap: 6, w: 1, angle: -.8, seed: 5 }); X.restore();
-  fillPoly([[bx + cw, bt], [bx + cw + 38, bt - 18], [bx + cw + 38, gy + 2], [bx + cw, gy]], PAL.paper);
-  inkStroke([[bx + cw, bt], [bx + cw + 38, bt - 18], [bx + cw + 38, gy + 2], [bx + cw, gy]], { w: 2.6, seed: 92, taper: [.02, .02] });
+  fillPoly([[bx + cw, bt], [bx + cw + 36, bt - 18], [bx + cw + 36, gy + 2], [bx + cw, gy]], PAL.paper);
+  inkStroke([[bx + cw, bt], [bx + cw + 36, bt - 18], [bx + cw + 36, gy + 2], [bx + cw, gy]], { w: 2.6, seed: 92, taper: [.02, .02] });
   if (o.hat > 0) {   // a tiny party hat on the retiree's cabinet
     const k = E.back(o.hat, 2.4), hx = bx + cw * .5, hy = bt - 2;
     X.save(); X.translate(hx, hy); X.scale(k, k); X.rotate(.12);
