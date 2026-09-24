@@ -201,8 +201,8 @@ function ringPos(cx, cy, R, rf, ph, o) { const [x, y] = rot2(Math.cos(ph) * rf *
 // front = true draws the near half (in front of the disc), false the far half.
 function ringLayer(t, cx, cy, R, o, front) {
   const sp = o.spin ?? 1, k = o.k ?? 1; if (k < .01) return;
-  const om = rf => sp * 2.1 * Math.pow(rf, -1.5), isF = ph => Math.sin(ph) > 0;
-  X.save(); X.globalAlpha *= k;
+  const om = rf => sp * 2.1 * Math.pow(rf, -1.5), isF = ph => Math.sin(ph) > 0, xf = o.xf ?? -1e9, fx = x => clamp((x - xf) / 60);
+  X.save(); X.globalAlpha *= k; X.beginPath(); X.rect(xf - 30, -100, W + 200, H + 200); X.clip();
   // streak arcs (the disk's flow), tapered like comets
   [1.34, 1.58, 1.9, 2.25, 2.62, 3.05].forEach((rf, ri) => {
     for (let sgi = 0; sgi < 3; sgi++) {
@@ -228,7 +228,7 @@ function ringLayer(t, cx, cy, R, o, front) {
   X.fillStyle = PAL.ink; X.beginPath();
   for (let i = 0; i < 70; i++) {
     const rf = 1.25 + hash(i * 3.1) * 2.1, ph = hash(i * 5.7) * TAU + om(rf) * t * 1.3; if (isF(ph) !== front) continue;
-    const [x, y] = ringPos(cx, cy, R, rf, ph, o), r = 1.3 + hash(i * 9.1) * 2.4; X.moveTo(x + r, y); X.arc(x, y, r, 0, TAU);
+    const [x, y] = ringPos(cx, cy, R, rf, ph, o), r = (1.3 + hash(i * 9.1) * 2.4) * fx(x); if (r < .5) continue; X.moveTo(x + r, y); X.arc(x, y, r, 0, TAU);
   }
   X.fill();
   // kitchenware
@@ -237,8 +237,9 @@ function ringLayer(t, cx, cy, R, o, front) {
   for (const it of items) {
     const [x, y] = ringPos(cx, cy, R, it.rf, it.ph, o), sc = (1 + .24 * it.d) * (R / 165) * 1.25;
     const trail = []; for (let j = 0; j <= 10; j++) trail.push(ringPos(cx, cy, R, it.rf, it.ph - (.05 + .42 * j / 10) / it.rf, o));
-    inkStroke(trail.reverse(), { w: 5 * sc, taper: [.95, .05], wob: .3, seed: it.i * 3, a: .5 });
-    ware(it.kind, x, y, it.sz * sc, t * (.5 + hash(it.i) * .9) * (it.i % 2 ? 1 : -1) + it.i, { seed: it.i * 11, w: 3 });
+    const fa = fx(x); if (fa <= 0) continue;
+    inkStroke(trail.reverse(), { w: 5 * sc, taper: [.95, .05], wob: .3, seed: it.i * 3, a: .5 * fa });
+    ware(it.kind, x, y, it.sz * sc, t * (.5 + hash(it.i) * .9) * (it.i % 2 ? 1 : -1) + it.i, { seed: it.i * 11, w: 3, a: fa });
   }
   X.restore();
 }
@@ -355,69 +356,110 @@ function prodShot(ext, o = {}) {
 // ============================================================ shots ============================================================
 const T_OPEN = BT(2);            // 1.554 — the door flies open on 我
 
+// ---- ink wisps: darkness curling out of a door gap (edge a→b, outward side away from `c`) ----
+function wisps(a, b, c, t, k, n, seed) {
+  if (k < .01) return;
+  const ex = b[0] - a[0], ey = b[1] - a[1], el = Math.hypot(ex, ey) || 1; let nx = ey / el, ny = -ex / el;
+  const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2; if ((mx - c[0]) * nx + (my - c[1]) * ny < 0) { nx = -nx; ny = -ny; }
+  for (let i = 0; i < n; i++) {
+    const u = (i + .5) / n + .08 * noise1(seed + i * 3.1 + t * .4), px = lerp(a[0], b[0], u), py = lerp(a[1], b[1], u);
+    const L = k * (120 + 110 * (.5 + .5 * noise1(seed * 7 + i * 1.7 + t * 1.3))), dir = (i + seed) % 2 ? 1 : -1, pts = [];
+    for (let j = 0; j <= 22; j++) {
+      const s2 = j / 22, d = L * s2, wig = Math.sin(s2 * 5 + t * 4 + i * 2) * 16 * s2;
+      let qx = px + nx * d - ny * wig * dir, qy = py + ny * d + nx * wig * dir;
+      if (s2 > .55) { const cu = (s2 - .55) / .45, ang = cu * 4.2 * dir, rr = L * .26 * (1 - cu * .55); qx += (Math.cos(ang) - 1) * rr * -ny * dir + Math.sin(ang) * rr * nx; qy += (Math.cos(ang) - 1) * rr * nx * dir + Math.sin(ang) * rr * ny; }
+      pts.push([qx, qy]);
+    }
+    inkStroke(pts, { w: 13 * Math.min(1, k), taper: [.02, .92], wob: .6, seed: seed * 13 + i, press: .3 });
+  }
+}
+// the cold-open door: slightly ajar, banging open wider on the beats (a bounce), then flung on 我
+function ajarAt(t) {
+  const hb = t >= BT(0) ? (() => { const n = Math.min(beatN(t), 1), sb = t - BT(n); return (n === 0 ? .7 : 1) * Math.exp(-sb * 6) * Math.abs(Math.sin(sb * 24)); })() : 0;
+  return .3 + .03 * Math.sin(t * 4.3) + .32 * hb;
+}
+
 // ---- 0.0 – 5.96 · cold open → the black hole reveal (one take) ----
 function sHole(t) {
   paperBG();
   const o = t - T_OPEN, opened = o > 0;
-  // beat rattle (before the open): the door bangs against its catch, the whole cabinet shudders
-  let rat = .004 * (1 + Math.sin(t * 43)), shk = [0, 0], hitCO = 0;
-  if (!opened && t >= BT(0)) { const n = beatN(t), sb = t - BT(n), amp = n === 0 ? .6 : 1; hitCO = amp * Math.exp(-sb * 3.2); rat += amp * .075 * Math.exp(-sb * 5.5) * Math.abs(Math.sin(sb * 31)); shk = shake(t, 8 * amp * Math.exp(-sb * 7), 3); }
-  const glide = E.soft(o / 1.7), push = E.io(clamp(o / 4.6));
-  const hit = t > 4.9 ? pulse(t, 5) : 0, pre = E.io(clamp(t / T_OPEN)), sx = lerp(CX, 1325, glide) + shk[0], sy = lerp(532, 566, glide) + shk[1];
-  const px = (lerp(lerp(560, 612, pre), 612, glide) + 40 * push) * (1 + .025 * hit);
-  const C = frameCam([0, 420, 0], -.05 * glide + .012 * Math.sin(t * .7), .1 + .03 * push, sx, sy, 840, px, { fov: 30 });
-  const door = opened ? 1.6 * spring(o, 1.5, .45) : rat;
+  let hitCO = 0, sb = 9;
+  if (t >= BT(0) && t < T_OPEN + .3) { const n = Math.min(beatN(t), 1); sb = t - BT(n); hitCO = (n === 0 ? .7 : 1) * Math.exp(-sb * 4); }
+  const glide = E.soft(o / 1.7), push = E.io(clamp(o / 4.6)), hit = t > 4.9 ? pulse(t, 5) : 0;
+  const shk = shake(t, 6 * hitCO, 3);
+  const sx = lerp(1190, 1370, glide) + shk[0], sy = lerp(545, 566, glide) + shk[1];
+  const px = (lerp(700, 612, glide) + 40 * push) * (1 + .025 * hit);
+  const C = frameCam([0, 420, 0], lerp(-.3, -.05, glide) + .012 * Math.sin(t * .7), .1 + .03 * push, sx, sy, 840, px, { fov: 30 });
+  const a0 = ajarAt(T_OPEN), door = opened ? a0 + (1.6 - a0) * spring(o, 1.5, .45) : ajarAt(t);
   const G = cabGeom(C, { door, hinge: 1 });
-  // the hole
+  // the hole + where it leaks: the crack along the door's free edge
   const dc = P2(C, [0, 440, -260]), ow = dist(G.open[0][0], G.open[0][1], G.open[1][0], G.open[1][1]);
   const R = ow * .42 * (1 + .05 * hit);
-  const reveal = opened ? E.out5(clamp((door - .95) / .6)) : 0;
-  const L = { x: dc[0], y: dc[1], mode: 'pinch', R: opened ? R * .98 : 0,
-    e: opened ? lerp(110, R * 1.12, reveal) : 70 + 90 * hitCO, k: 1, sw: opened ? .9 + .5 * hit + .25 * Math.sin(t * .9) : .3 + .5 * hitCO };
-  warpGrid({ gap: 60, L, a: .075 });
-  const ring = { tilt: -.19, flat: .22, spin: 1 + .5 * hit + .3 * push, k: reveal };
-  if (opened) {
-    cabInterior(C, G, L, reveal);
-    ringLayer(t, dc[0], dc[1], R, ring, false);
-    blackDisc(dc[0], dc[1], R * E.out5(clamp(o / .45)), { tilt: ring.tilt, k: reveal });
-  }
+  const reveal = opened ? E.out5(clamp((door - .3) / .5)) : 0, gone = 1 - clamp(o / .25);
+  const ck = [lerp(G.open[0][0], G.front[0][0], .5), lerp(G.open[0][1], G.open[3][1], .55)];
+  const L = { x: lerp(ck[0], dc[0], reveal), y: lerp(ck[1], dc[1], reveal), mode: 'pinch', R: R * .98 * reveal,
+    e: lerp(235 + 60 * hitCO, R * 1.12, reveal), k: 1, sw: lerp(.7 + .4 * hitCO, .9 + .5 * hit + .25 * Math.sin(t * .9), reveal) };
+  warpGrid({ gap: 60, L, a: .08 });
+  const ring = { tilt: -.19, flat: .22, spin: 1 + .5 * hit + .3 * push, k: reveal, xf: 850 };
   cabBody(C, G);
-  const fl = P2(C, [0, 0, 0]); inkStroke([[fl[0] - 640, fl[1]], [fl[0] + 640, fl[1]]], { w: 3, taper: [.3, .3], seed: 5 });
-  if (!opened) {
-    // darkness leaks round the closed door, swelling on each beat
-    const leak = .55 + .6 * hitCO + Math.min(.6, rat * 6);
-    darkGlow(G.front, t, leak, { spread: 120 });
-    cabDoor(C, G);
-    gapLine(G.front, leak);
-  } else {
-    // whoosh: the free edge's path over the last few frames of the fling
-    if (o < .5) for (const y of [120, 460, 770]) {
-      const pts = []; for (let j = 0; j <= 12; j++) { const oo = Math.max(0, o - j * .018), th = 1.6 * spring(oo, 1.5, .45); pts.push(P2(C, cabGeom(C, { door: th, hinge: 1 }).doorFn([-297, y, 20]))); }
+  if (opened) cabInterior(C, G, L, reveal);
+  // the void: solid black from the very first frame; the lensed interior + disc bloom out of it
+  X.save(); X.globalAlpha *= 1 - reveal; fillPoly(G.open, PAL.ink); X.restore();
+  if (opened) {
+    ringLayer(t, dc[0], dc[1], R, ring, false);
+    blackDisc(dc[0], dc[1], R * E.out5(clamp(o / .15)), { tilt: ring.tilt, k: reveal });
+    pline(G.outer, 2.8, PAL.ink, true, 1, 7);
+  }
+  // a wok half-swallowed by the crack (body in the dark, handle sticking out), yanked further in on each beat
+  const wk = 1 - clamp((o + .05) / .2);
+  if (wk > 0) {
+    const pullIn = 18 * t + 30 * (t >= BT(0) ? 1 - Math.exp(-(t - BT(0)) * 9) : 0) + 30 * (t >= BT(1) ? 1 - Math.exp(-(t - BT(1)) * 9) : 0);
+    const ang = -2.62 + .07 * Math.sin(t * 6) + .12 * hitCO * Math.sin(sb * 30), dx = Math.cos(ang), dy = Math.sin(ang), sz = 64;
+    const bcx = ck[0] + 6 - dx * pullIn, bcy = ck[1] - 30 - dy * pullIn;
+    // handle points out along (dx, dy): the pot's local +x is its handle side
+    ware('pot', bcx, bcy, sz, ang, { seed: 5, w: 4.2, a: wk });
+    const tipx = bcx + dx * 2.05 * sz, tipy = bcy + dy * 2.05 * sz, bl = Math.min(tipx, bcx - sz * .9) - 16, bt = Math.min(tipy, bcy - sz * .75) - 16;
+    const br = ck[0] + 10, bb = bcy + sz * .75 + 14;
+    bbox(bl, bt, br - bl, bb - bt, '锅  404', { k: 1, a: wk, size: 28, lw: 3.5, dash: t > 1.25 ? [12, 9] : [] });
+  }
+  // the door: rattles in screen space on the beats (a jolt about its hinge)
+  const hs = P2(C, G.doorFn([297, 796, 20])), jr = .02 * hitCO * Math.sin(sb * 38), jx = -7 * hitCO * Math.sin(sb * 31);
+  X.save(); X.translate(hs[0] + jx, hs[1]); X.rotate(jr); X.translate(-hs[0], -hs[1]);
+  cabDoor(C, G);
+  if (gone > 0) {
+    gapLine(G.front, gone * (.6 + .5 * hitCO));
+    const cen = [(G.front[0][0] + G.front[2][0]) / 2, (G.front[0][1] + G.front[2][1]) / 2];
+    wisps(G.front[3], G.front[0], cen, t, gone * (.85 + .55 * hitCO), 4, 1);
+  }
+  X.restore();
+  if (opened) {
+    if (o < .5) for (const y of [120, 460, 770]) {   // whoosh of the free edge
+      const pts = []; for (let j = 0; j <= 12; j++) { const oo = Math.max(0, o - j * .018), th = a0 + (1.6 - a0) * spring(oo, 1.5, .45); pts.push(P2(C, cabGeom(C, { door: th, hinge: 1 }).doorFn([-297, y, 20]))); }
       inkStroke(pts.reverse(), { w: 5, taper: [.9, .05], wob: .3, seed: 90 + y, a: .7 * (1 - o / .5) });
     }
-    cabDoor(C, G);
     ringLayer(t, dc[0], dc[1], R, ring, true);
   }
-  // title stamp (beat 0) and 咚 (beat 1) — the cold-open hook
-  const fadeCO = 1 - clamp(o / .3);
-  if (t >= BT(0) && fadeCO > 0) {
-    const a = t - BT(0), k = E.out5(clamp(a / .16)), s = lerp(1.7, 1, k);
-    X.save(); X.globalAlpha *= clamp(a / .05) * fadeCO; X.translate(CX, 968); X.rotate(-.018); X.scale(s, s);
-    const tw = measure('一拉就到位', 40, F.serif, 900, 14);
-    X.strokeStyle = PAL.ink; X.lineWidth = 3; X.strokeRect(-tw / 2 - 20, -40, tw + 40, 64);
-    text('一拉就到位', 7, 8, { size: 40, font: F.serif, weight: 900, align: 'center', track: 14 });
-    text('第一章 · 黑洞橱柜', 4, 64, { size: 19, font: F.sans, weight: 700, align: 'center', track: 6, col: PAL.ink2 });
+  const fl = P2(C, [0, 0, 0]); inkStroke([[fl[0] - 640, fl[1]], [fl[0] + 640, fl[1]]], { w: 3, taper: [.3, .3], seed: 5 });
+  // title (readable on a phone from frame 0), lifts away just before 我 lands
+  const tOut = E.in(clamp((t - 1.3) / .24));
+  if (tOut < 1) {
+    const bump = t >= BT(0) ? .05 * Math.exp(-(t - BT(beatN(t))) * 8) : 0;
+    X.save(); X.globalAlpha *= 1 - tOut; X.translate(118 + shk[0] * .3, 500 - 60 * tOut); X.scale(1 + bump, 1 + bump);
+    text('一拉就到位', 0, 0, { size: 104, font: F.serif, weight: 900, track: 4 });
+    line(4, 40, 520, 40, 4, PAL.ink);
+    text('HIGOLD 悍高 · 厨房拉篮 M/V', 4, 92, { size: 30, font: F.sans, weight: 700, track: 3 });
+    text('第一章 · 黑洞橱柜', 4, 138, { size: 26, font: F.sans, weight: 500, col: PAL.ink2, track: 5 });
     X.restore();
   }
-  if (t >= BT(1) && fadeCO > 0) {
-    const a = t - BT(1), k = E.back(clamp(a / .2), 2.4), ax = G.outer[3][0] - 190, ay = lerp(G.outer[3][1], G.outer[0][1], .3);
-    X.save(); X.globalAlpha *= fadeCO; X.translate(ax, ay); X.scale(k, k);
-    marker('咚', 0, 0, { size: 180, rot: -.14, align: 'center' });
-    for (let i = 0; i < 3; i++) { const aa = -.4 + i * .4, r0 = 118, r1 = 118 + 50 * E.out(clamp(a / .25)); inkStroke([[Math.cos(aa) * r0 + 24, Math.sin(aa) * r0], [Math.cos(aa) * r1 + 24, Math.sin(aa) * r1]], { w: 7, taper: [.1, .6], seed: 40 + i }); }
+  if (t >= BT(1) && gone > 0) {
+    const a = t - BT(1), k = E.back(clamp(a / .2), 2.4), ax = G.outer[2][0] + 150, ay = G.outer[2][1] + 70;
+    X.save(); X.globalAlpha *= gone; X.translate(ax, ay); X.scale(k, k);
+    marker('咚', 0, 0, { size: 170, rot: .12, align: 'center' });
+    for (let i = 0; i < 3; i++) { const aa = Math.PI + .4 - i * .4, r0 = 110, r1 = 110 + 46 * E.out(clamp(a / .25)); inkStroke([[Math.cos(aa) * r0 - 10, Math.sin(aa) * r0], [Math.cos(aa) * r1 - 10, Math.sin(aa) * r1]], { w: 7, taper: [.1, .6], seed: 40 + i }); }
     X.restore();
   }
   // lyric 0: 我家橱柜 / 深处有黑洞 — 黑洞 in orange
-  lyHero(0, t, { x: 118, y: 470, size: 136, align: 'left', hi: '黑洞', lead: 1.16, exit: 'fade', hold: .1 });
+  lyHero(0, t, { x: 118, y: 470, size: 128, align: 'left', hi: '黑洞', lead: 1.16, exit: 'fade', hold: .1 });
   metaStrip(t, { br: 'CH.01  ·  THE BLACK-HOLE CABINET' });
 }
 

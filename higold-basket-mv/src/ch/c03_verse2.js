@@ -41,25 +41,29 @@
   // basket's top + left side); dir -1: down-left (top + right side). Draw order for grids (dir +1): bottom rows first, right→left.
   function drawer(x, y, w, h, e, o = {}) {
     const ink = o.ink ?? PAL.ink, pap = o.paper ?? PAL.paper, lw = o.lw ?? clamp(w / 120, 1.2, 4), dir = o.dir ?? 1;
-    const Dp = h * 1.2 * Math.max(0, e), ox = dir * .42 * Dp, oy = .30 * Dp, fx = x + ox, fy = y + oy, hand = o.hand ?? w > 170;
+    const Dp = h * 1.2 * Math.max(0, e), ox = dir * .25 * Dp, oy = .6 * Dp, fx = x + ox, fy = y + oy, hand = o.hand ?? w > 170;
     if (Dp > .8) {
-      rect(x, y, w, h, o.cav ?? PAL.ink);                                           // the dark cabinet cavity
-      const rim = h * .16;
-      // basket interior seen through the open top: floor tint + slats running in depth
-      fillPoly([[fx, fy + rim], [x, y + rim], [x + w, y + rim], [fx + w, fy + rim]], PAL.paper2);
-      const sx0 = dir > 0 ? x : x + w, sx1 = dir > 0 ? fx : fx + w;               // visible side edge (cavity, front)
+      const rim = h * .06, sh = Math.max(2, h * .06);
+      rect(x, y, w, h, PAL.paper2);                                              // inside of the carcass, soft
+      rect(x, y, w, sh, PAL.ink2, .9);                                           // thin contact shadow under the rail
+      const sx0 = dir > 0 ? x : x + w, sx1 = dir > 0 ? fx : fx + w;             // visible side edge (opening, front)
+      // the basket seen from above: its floor with slats running in depth, contents, then the wire side and the rim
+      const ip = [[fx, fy + rim], [x, y + rim + sh], [x + w, y + rim + sh], [fx + w, fy + rim]];
+      fillPoly(ip, pap);
+      X.save(); X.strokeStyle = ink; X.lineCap = 'round'; X.globalAlpha *= .45; X.lineWidth = Math.max(.9, lw * .45); X.beginPath();
+      const ns = Math.max(3, Math.round(w / 30));
+      for (let k = 1; k < ns; k++) { const q = k / ns; X.moveTo(lerp(fx, fx + w, q), fy + rim); X.lineTo(lerp(x, x + w, q), y + rim + sh); }
+      X.stroke(); X.restore();
+      if (o.items) o.items(fx, fy + rim, x, y + rim + sh, w, h);
       fillPoly([[sx1, fy + rim], [sx0, y + rim], [sx0, y + h], [sx1, fy + h]], pap);
       X.save(); X.strokeStyle = ink; X.lineCap = 'round'; X.lineWidth = Math.max(1, lw * .55); X.beginPath();
-      const ns = Math.max(3, Math.round(w / 34));
-      for (let k = 1; k < ns; k++) { const q = k / ns; X.moveTo(lerp(fx, fx + w, q), fy + rim); X.lineTo(lerp(x, x + w, q), y + rim); }
-      const nu = Math.max(2, Math.round(Dp / Math.max(9, h * .14)));
+      const nu = Math.max(2, Math.round(Math.abs(ox) / Math.max(7, w * .03)));
       for (let k = 1; k < nu; k++) { const q = k / nu, px = lerp(sx1, sx0, q), py = lerp(fy, y, q); X.moveTo(px, py + rim); X.lineTo(px, py + h); }
-      for (const f of [.55]) { X.moveTo(sx1, fy + h * f); X.lineTo(sx0, y + h * f); }
-      X.moveTo(lerp(fx, x, .5), lerp(fy, y, .5) + rim); X.lineTo(lerp(fx + w, x + w, .5), lerp(fy, y, .5) + rim);
-      X.stroke(); X.lineWidth = Math.max(1.2, lw * .9); X.beginPath();
-      X.moveTo(sx1, fy + rim); X.lineTo(sx0, y + rim); X.lineTo(dir > 0 ? x + w : x, y + rim); X.stroke();   // top rim
-      X.restore();
-      if (o.items) o.items(fx, fy + rim, x, y + rim, w, h);
+      X.moveTo(sx1, fy + h * .55); X.lineTo(sx0, y + h * .55);
+      X.stroke(); X.lineWidth = Math.max(1.2, lw * .85); X.beginPath();
+      X.moveTo(fx + (dir > 0 ? w : 0), fy + rim); X.lineTo(dir > 0 ? x + w : x, y + rim + sh);                 // far rim edge
+      X.moveTo(sx1, fy + rim); X.lineTo(sx0, y + rim + sh); X.lineTo(dir > 0 ? x + w : x, y + rim + sh);       // near rim + back rim
+      X.stroke(); X.restore();
     }
     // the front panel
     const F4 = [[fx, fy], [fx + w, fy], [fx + w, fy + h], [fx, fy + h]];
@@ -84,7 +88,7 @@
     const hw = d0w * .36, ht = Math.max(2.5, d0h * .045), sp = E.io(s);
     const hs = ax === 'c' ? [[x + w / 2 - w / 4 * sp, y + d0h * .14], [x + w / 2 + w / 4 * sp, y + d0h * .14]]
                           : [[x + w / 2, y + d0h * .14], [x + w / 2, y + d0h * .14 + (h / 2) * sp]];
-    hs.forEach(([hx, hy], i) => rrect(hx - hw / 2, hy - ht / 2, hw, ht, ht / 2, { fill: i === 0 && o.hot ? PAL.orange : PAL.ink2 }));
+    for (let i = hs.length - 1; i >= 0; i--) { const [hx, hy] = hs[i]; rrect(hx - hw / 2, hy - ht / 2, hw, ht, ht / 2, { fill: i === 0 && o.hot ? PAL.orange : PAL.ink2 }); }
   }
 
   // ================================================================ SHOT 1 · FIG.1 drawer mitosis (38.5 – 41.44)
@@ -141,8 +145,10 @@
     } else {
       const age = t - tSnap, g = gap * spring(age, 3.2, .32), pull = .38 * E.soft((t - tPair) / .5);
       const xL = cx - w - g / 2, xR = cx + g / 2;                            // daughters pull apart, mirror-symmetric
+      X.save(); X.beginPath(); X.arc(cx, cy, S1.R - 7, 0, TAU); X.clip();   // everything stays inside the field of view
       drawer(xR, cy - h / 2 + drift, w, h, pull, { seed: 14, items: basketItems, lw: 4 });
       drawer(xL, cy - h / 2 + drift, w, h, pull, { handle: hot, seed: 13, items: basketItems, lw: 4, dir: -1 });
+      X.restore();
       if (age < .35) {
         const k = E.out5(age / .35);
         for (let i = 0; i < 10; i++) {
@@ -150,7 +156,7 @@
           line(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * .8, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1 * .8, 5 * (1 - k) + 1, PAL.ink, 1 - k);
         }
       }
-      sticker(cx + w - 10, cy - h / 2 - 70, '×2', { k: clamp(age / .28), size: 44, rot: .06, font: F.anton, weight: 400 });
+      sticker(cx, cy - h / 2 - 118, '×2', { k: clamp(age / .28), size: 46, rot: -.04, font: F.heavy, weight: 900 });
     }
     camEnd();
     // header + lyric (text left) + the exponential counter that FIG.2 continues
@@ -158,16 +164,19 @@
     lyHero(12, t, { x: LX, y: 500, size: 128, lead: 1.24, align: 'left', hi: '两', exit: 'fade', hold: .5, fade: .12 });
     counter(t < tSnap ? 1 : 2, t - tSnap);
   }
-  // plates standing in the comb + a bowl, seen over the rim (clipped to the basket interior)
+  // plates standing in the comb + stacked bowls, seen from above (clipped to the basket interior)
   function basketItems(fx, fy, x, y, w, h) {
     X.save(); poly([[fx, fy], [x, y], [x + w, y], [fx + w, fy]]); X.clip();
     X.strokeStyle = PAL.ink; X.lineWidth = Math.max(1.2, w / 170); X.fillStyle = PAL.paper;
+    const r = w * .14;
     for (let i = 4; i >= 0; i--) {
-      const q = .12 + i * .17, px = lerp(fx, x, q) + w * .3, py = lerp(fy, y, q) + h * .2, r = w * .15;
+      const q = .12 + i * .18, px = lerp(fx, x, q) + w * .29, py = lerp(fy, y, q) + r * .5;
       X.beginPath(); X.arc(px, py, r, Math.PI, TAU); X.closePath(); X.fill(); X.stroke();
     }
-    const bx = lerp(fx, x, .45) + w * .74, by = lerp(fy, y, .45) + h * .06;
-    X.beginPath(); X.ellipse(bx, by, w * .12, h * .1, 0, Math.PI, TAU); X.closePath(); X.fill(); X.stroke();
+    for (let i = 0; i < 2; i++) {
+      const bx = lerp(fx, x, .42) + w * .74, by = lerp(fy, y, .42) - i * h * .05;
+      X.beginPath(); X.ellipse(bx, by, w * .12, w * .045, 0, 0, TAU); X.fill(); X.stroke();
+    }
     X.restore();
   }
 

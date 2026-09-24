@@ -77,20 +77,22 @@
       let x = o.x - tw / 2; const y = o.y + r * size * 1.1;
       row.forEach((c, j) => {
         const k = chK(c.ti, t, .16), hot = (o.hi || '').includes(c.ch), cx = x + (ws[j] - track) / 2, cy = y - size * .38;
-        if (k <= 0) text(c.ch, x, y, { size, font, weight: wt, col: null, stroke: rgba(PA, .07 * env), sw: 2 });
+        if (k <= 0) text(c.ch, x, y, { size, font, weight: wt, col: null, stroke: rgba(PA, .08 * env), sw: 3 });
         else {
           const s = lerp(1.45, 1, E.out5(k)), a = clamp(k * 4) * env, age = t - c.ti;
           if (age > 0 && age < .45) {       // echo outline flies outward
             const es = 1 + E.out(age / .45) * .2;
             X.save(); X.translate(cx, cy); X.scale(es, es); X.translate(-cx, -cy);
-            text(c.ch, x, y, { size, font, weight: wt, col: null, stroke: hot ? OR : PA, sw: 2.5, a: (1 - age / .45) * .45 * env });
+            text(c.ch, x, y, { size, font, weight: wt, col: null, stroke: hot ? OR : PA, sw: 4, a: (1 - age / .45) * .45 * env });
             X.restore();
           }
           X.save(); X.translate(cx, cy); X.scale(s, s); X.translate(-cx, -cy);
-          if (hot) {
-            text(c.ch, x + size * .045, y + size * .045, { size, font, weight: wt, col: null, stroke: PA, sw: 3.5, a });
-            text(c.ch, x, y, { size, font, weight: wt, col: OR, a });
-          } else text(c.ch, x, y, { size, font, weight: wt, col: rgba(PA, .2), stroke: PA, sw: o.sw ?? 5, a });
+          // every char gets the offset (misregistered) outline; 拉 is solid orange, the rest slam in solid paper and relax to a
+          // half-lit body inside a bright outline, so a lone 一 still reads as a glyph and the finished line lands firm
+          text(c.ch, x + size * .045, y + size * .045, { size, font, weight: wt, col: null, stroke: hot ? PA : rgba(PA, .55), sw: 5, a });
+          if (hot) text(c.ch, x, y, { size, font, weight: wt, col: OR, a });
+          else { const body = lerp(1, .55, E.out(clamp((age - .08) / .4)));
+            text(c.ch, x, y, { size, font, weight: wt, col: rgba(PA, body), stroke: PA, sw: o.sw ?? 7, a }); }
           X.restore();
         }
         x += ws[j];
@@ -190,14 +192,18 @@
   }
   function shotSplit(t, lt, dur) {
     paperBG(NI); DARK = true;
-    const kp = E.soft((t - 60.46) / .6), edge = 960 * kp;
+    const kp = E.soft((t - 60.36) / .45), edge = 960 * kp;
     // ---- right half: night, pot drawer (glow) ----
-    const extR = 330 * E.soft((t - L18[4]) / .9), lid = 40 * Math.max(0, Math.sin(clamp((t - L18[6] + .02) / .32) * Math.PI));
+    const extR = 330 * E.soft((t - L18[4]) / .9), lk = clamp((t - L18[6] + .04) / .36), lid = 90 * Math.max(0, Math.sin(lk * Math.PI)) * (1 - lk * .3);
     const CR = frameCam([0, 150, 230 + extR * .5], -.72 - .06 * clamp(lt / 2.4), .5, 1450, 700, 760, 700, { fov: 28 });
     X.save(); X.beginPath(); X.rect(edge, 0, W - edge, H); X.clip();
     pool(1450, 800, 520, 170, .06);
     render3(potDrawer(extR, lid), CR, { style: 'glow', dark: true });
-    if (lid > 1) for (let k = 0; k < 3; k++) { const [px, py] = pin(CR, [-105, 260 + lid * 2, 235 + extR]); line(px - 60 + k * 60, py - 30 - lid, px - 60 + k * 60 + (k - 1) * 20, py - 70 - lid * 1.6, 3, PA, .6); }
+    // steam puffs out from under the lid knob on 锅 (the lid clacks up and drops back)
+    const sa = t - L18[6] + .04;
+    if (sa > 0 && sa < .7) { const [kx, ky] = pin(CR, [-105, 50 + 128 + lid + 44, 235 + extR]), q = sa / .7;
+      for (let k = -1; k <= 1; k++) { const pts = []; for (let u = 0; u <= 6; u++) { const f = u / 6; pts.push([kx + k * 34 + Math.sin(f * 5 + k * 2 + sa * 9) * 9 * f + k * 16 * f, ky - 18 - f * (40 + 45 * E.out(q))]); }
+        inkStroke(pts, { w: 5, col: PA, taper: [.3, .5], wob: .6, seed: 700 + k, a: .85 * (1 - q) }); } }
     mono('R', 1020, 150, { size: 22 }); mono('碗碟拉篮 · 锅', 1060, 150, { size: 22, a: .7 });
     X.restore();
     // ---- left half: paper panel pulled in from the left edge like a drawer front ----
@@ -235,7 +241,7 @@
     X.strokeStyle = PAL.steel1; X.lineWidth = 3; X.strokeRect(-600, 500, 3400, 280);
     line(-600, 512, 2800, 512, 4, PAL.steel2, .8); line(-600, 768, 2800, 768, 3, PAL.steel0, .9);
     // mounting slots on the outer web
-    for (let x = -300; x < 2700; x += 330) { rrect(x, 520, 90, 18, 9, { fill: '#0A0A0C', stroke: PAL.steel0, w: 2 }); rrect(x + 120, 742, 60, 16, 8, { fill: '#0A0A0C', stroke: PAL.steel0, w: 2 }); }
+    for (let x = -300; x < 2700; x += 330) { rrect(x, 520, 90, 18, 9, { fill: '#0A0A0C', stroke: PAL.steel0, w: 2 }); if (x + 180 < 440 || x + 120 > 1500) rrect(x + 120, 742, 60, 16, 8, { fill: '#0A0A0C', stroke: PAL.steel0, w: 2 }); }
     // ball cages (move at half the inner member speed)
     const cage = 330 + (xi - 470) * .5;
     for (const by of [556, 724]) {
@@ -260,7 +266,7 @@
     const g = X.createLinearGradient(sx - 120, 0, sx + 120, 0); g.addColorStop(0, rgba(PAL.shine, 0)); g.addColorStop(.5, rgba(PAL.shine, .35)); g.addColorStop(1, rgba(PAL.shine, 0));
     X.fillStyle = g; X.fillRect(sx - 120, 580, 240, 120);
     // stamped legend on the outer web
-    text('SOFT-CLOSE  ·  阻尼缓冲  ·  FULL EXTENSION  →', 1000, 764, { size: 17, font: F.mono, weight: 600, col: PAL.steel1, a: .7, track: 3 });
+    text('SOFT-CLOSE  ·  阻尼缓冲  ·  FULL EXTENSION  →', 460, 762, { size: 17, font: F.mono, weight: 600, col: PAL.steel1, a: .75, track: 3 });
     X.restore();
     return tip;
   }
@@ -301,7 +307,7 @@
       brackets(60, 60, W - 120, H - 120, 70, PA, 3, .9);
       rect(W - 190, 88, 14, 44, PA); rect(W - 166, 88, 14, 44, PA);
       mono('FREEZE', W - 206, 122, { size: 24, align: 'right' });
-      mono('00:' + TDA.toFixed(2) + '  ·  嗒', W - 90, H - 86, { size: 20, align: 'right', a: .75 });
+      mono('01:' + (TDA - 60).toFixed(2).padStart(5, '0') + '  ·  嗒', W - 90, H - 86, { size: 20, align: 'right', a: .75 });
       line(90, H - 94, 90 + (W - 180) * clamp((t - TDA) / (BEAT)), H - 94, 3, OR, .9);
     } else {
       mono('MACRO  ·  DAMPER', 90, H - 86, { size: 20, a: .6 });
@@ -466,13 +472,14 @@
       if (c.gy < y + 540) { line(x, c.gy + 2, x + 960, c.gy + 2, 2, PA, .3); pool(c.cx, c.gy + 2, 150, 22, .15); }
       // choreography: point at LAN, arms up, point at LAN again
       const toLan = c.down ? KP.pointDown : KP.point, fx = c.dir < 0;
-      const A = fx ? mirrorPose(toLan) : toLan, Bp = pose({ ...KP.armsUp, dy: .25 });
-      const keys = [[-1e9, KP.hips], [b0 + .02 * i, A], [b1, Bp], [b2, A]];
+      const A = fx ? mirrorPose(toLan) : toLan, Bp = pose({ ...KP.armsUp, sL: 2.12, eL: -.05, sR: 2.12, eR: -.05, dy: .25 });
+      const Bb = pose({ ...Bp, dy: -.12, kL: .35, kR: .35, hL: .2, hR: .2 });
+      const keys = [[-1e9, KP.hips], [b0 + .02 * i, A], [b1, Bp], [b2, Bb]];
       const P = keyPose(t, keys, .12);
-      const f = figure(c.cx, c.gy, c.s, P, { who: c.who, col: PA, dark: true, seed: 20 + i * 5, face: t >= b1 && t < b2 ? 'happy' : 'smile' });
+      const f = figure(c.cx, c.gy, c.s, P, { who: c.who, col: PA, dark: true, seed: 20 + i * 5, face: t >= b1 ? 'happy' : 'smile' });
       X.restore(); X.restore();
       const hnd = fx ? f.handL : f.handR;
-      aim.push([c.cx + (hnd[0] - c.cx) * dz, c.cy + (hnd[1] - c.cy) * dz, t < b1 ? t - b0 - .02 * i : t - b2]);
+      aim.push([c.cx + (hnd[0] - c.cx) * dz, c.cy + (hnd[1] - c.cy) * dz, t - b0 - .02 * i]);
       mono(String(i + 1).padStart(2, '0') + ' · ' + c.who.toUpperCase(), x + (c.dir > 0 ? 36 : 924), y + (c.down ? 52 : 510), { size: 20, align: c.dir > 0 ? 'left' : 'right', a: .75 });
     });
     // grid seams
@@ -480,7 +487,7 @@
     // centre medallion with LAN; pulses on every beat
     const mk = E.back(clamp((t - b0) / .18), 2.2), pr = 124 * mk * (1 + .05 * pulse(t, 5));
     // orange sight-lines from each pointing finger to LAN (only while they point at her)
-    if (t < b1 || t >= b2) aim.forEach(([hx, hy, age]) => {
+    if (t < b1) aim.forEach(([hx, hy, age]) => {
       const k = E.out(age / .16); if (k <= 0) return;
       const dx = CX - hx, dy = CY - hy, L = Math.hypot(dx, dy), ex = hx + dx * (1 - (pr + 18) / L) * k, ey = hy + dy * (1 - (pr + 18) / L) * k;
       X.save(); X.setLineDash([10, 8]); line(hx + dx / L * 16, hy + dy / L * 16, ex, ey, 3, OR, .9); X.restore();
@@ -489,7 +496,7 @@
       circle(CX + 8, CY + 8, pr + 12, { fill: '#000' }); circle(CX, CY, pr + 12, { fill: PAL.ink }); circle(CX, CY, pr, { fill: PA }); circle(CX, CY, pr + 2, { stroke: OR, w: 9 });
       X.save(); X.beginPath(); X.arc(CX, CY, pr - 4, 0, TAU); X.clip();
       const fs = pr * .4;
-      figure(CX, CY - .05 * pr + 9.25 * fs, fs, pose({ ...KP.frame, head: .12 * Math.sin(bp(t) * Math.PI) }), { who: 'lan', face: t >= b1 && t < b2 ? 'happy' : 'star', blush: 1, seed: 9, shadow: false });
+      figure(CX, CY - .05 * pr + 9.25 * fs, fs, pose({ ...KP.frame, head: .12 * Math.sin(bp(t) * Math.PI) }), { who: 'lan', face: t >= b1 ? 'happy' : 'star', blush: 1, seed: 9, shadow: false });
       X.restore();
       sticker(CX, CY + pr + 44, 'LAN · 小篮', { size: 22, k: mk, font: F.sans, weight: 800, rot: -.03 });
     }
@@ -523,7 +530,8 @@
     D = rotateY3(D, hingeL ? -ang : ang, [hx, 0, 2]);
     // knob
     const kx = hingeL ? x1 - 60 : x0 + 60, ky = row ? y0 + 80 : y1 - 80;
-    D.push(...rotateY3([{ k: 'face', layer: 2, bias: -30, pts: [[kx - 5, ky - 36, 22], [kx + 5, ky - 36, 22], [kx + 5, ky + 36, 22], [kx - 5, ky + 36, 22]], fill: PAL.ink2, ink: PAL.ink, iw: 1 }], hingeL ? -ang : ang, [hx, 0, 2]));
+    // (closed doors: the knob goes on its own top layer so it can never depth-sort behind its door slab)
+    D.push(...rotateY3([{ k: 'face', layer: ang < .05 ? 3 : 2, bias: -90, pts: [[kx - 5, ky - 36, 22], [kx + 5, ky - 36, 22], [kx + 5, ky + 36, 22], [kx - 5, ky + 36, 22]], fill: PAL.ink2, ink: PAL.ink, iw: 1 }], hingeL ? -ang : ang, [hx, 0, 2]));
     P.push(...D);
     return P;
   }
@@ -538,7 +546,7 @@
     for (let c = 0; c < NC; c++) for (const row of [0, 1]) {
       const idx = ORDER.findIndex(q => q[0] === c && q[1] === row), ts = shutT(idx), open = 1.72 + .22 * (hash(c * 7 + row) - .5);
       const ang = open * (1 - E.soft((t - ts) / .6));
-      if (ang < .002) P.push(...cabinet(c, row, 0, gl).filter(q => q.layer === 2)); else P.push(...cabinet(c, row, ang, gl));
+      if (ang < .002) P.push(...cabinet(c, row, 0, gl).filter(q => q.layer >= 2)); else P.push(...cabinet(c, row, ang, gl));
     }
     render3(P, C, { style: 'glow', lw: 1 });
     if (fade > 0) rect(0, 0, W, H, PA, .86 * fade);      // the drawing recedes into the paper
